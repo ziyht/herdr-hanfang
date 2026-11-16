@@ -8,7 +8,7 @@ Herdr 桌面版(main 布局)的完整简体中文界面。结构与原版一致,
 ## 安装
 
 ```sh
-git clone https://github.com/<你的用户名>/herdr-main-zh.git
+git clone https://github.com/ziyht/herdr-main-zh.git
 cd herdr-main-zh
 cp layouts/main-zh.json ~/.config/herdr-app/layouts/
 cp -R mods/*-zh ~/.config/herdr-app/mods/
