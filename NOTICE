@@ -1,0 +1,20 @@
+NOTICE
+
+This product includes Chinese-language derivative works of the Herdr desktop
+app's shipped mods and frame screens (https://herdr.dev, Apache License 2.0):
+
+- mods/*-zh/ are Chinese translations of Herdr's shipped mods (agents,
+  changes, files, machine-add, menu, new-menu, pane, picker, spaces, tabs,
+  toast, workspace-chrome, workspace-status, worktree), cloned at
+  Herdr 0.1.16 and translated.
+- zh-patch/zh/*.js are Chinese translations of Herdr's shipped mod and frame
+  sources (confirm, prompt, peek, help; frame settings, palette, welcome,
+  whatsnew, feedback) at Herdr 0.1.16. Part of these translations was
+  ported from yzj160212/herdr-zh (Apache License 2.0):
+  https://github.com/yzj160212/herdr-zh
+- Icon SVGs (mods/workspace-chrome-zh/*.svg and other mod assets) originate
+  from Lucide (https://lucide.dev), ISC License, as shipped with Herdr.
+- themes/catppuccin.json follows the Catppuccin Mocha palette
+  (https://catppuccin.com).
+
+Copyright 2026. Licensed under the Apache License, Version 2.0.
