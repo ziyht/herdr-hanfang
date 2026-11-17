@@ -46,8 +46,11 @@ cp -R zh-patch ~/.config/herdr-app/
 osascript -e 'quit app "Herdr"'; sleep 3; open -a Herdr
 ```
 
-译文与 0.1.16 源码对齐;Herdr 升级后这些文件不跟进新版,
-需重新移植后重新 apply。回滚:`apply.sh --restore`。
+执行时机:装包后跑一次并重启即可;文件锁跨 Herdr 重启、跨系统重启一直有效,
+日常使用无需再跑。唯一需要重跑的时机是 Herdr 升级后——不跑的后果是设置页
+等界面保持中文但停留在当前版本,新版新增的选项不会出现(不会崩溃)。
+`apply.sh --status` 随时查看九个文件的锁定状态,`--restore` 一键回滚英文。
+译文与 0.1.16 源码逐行对齐,升级后需重新移植再 apply。
 
 ## 升级
 
