@@ -15,7 +15,7 @@ const SECTIONS = [
   { id: "privacy", title: "隐私", icon: "shield" },
 ];
 
-const LOOKS = { main: "Herdr", terminals: "Terminals", win98: "Herdr 98" };
+const LOOKS = { main: "Herdr", terminals: "Terminals", win98: "Herdr 98", hanfang: "汉坊" };
 const APPEARANCES = [
   [null, "跟随系统"],
   ["light", "浅色"],
