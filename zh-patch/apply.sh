@@ -63,6 +63,7 @@ done
 
 app_version() {
   { herdr-app --version 2>/dev/null \
+    || defaults read /Applications/SSH/Herdr.app/Contents/Info.plist CFBundleShortVersionString 2>/dev/null \
     || defaults read /Applications/Herdr.app/Contents/Info.plist CFBundleShortVersionString 2>/dev/null; } \
     | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1
 }
@@ -129,7 +130,7 @@ apply)
     fi
   done
   if [ "$drift" -eq 1 ] && [ "$FORCE" -eq 0 ]; then
-    echo "错误: 存在漂移/缺失, 默认中止。重新移植(herdr 技能 scripts/audit_zh_mods.py 可辅助), 或 --force" >&2
+    echo "错误: 存在漂移/缺失, 默认中止。按 README「升级」一节的骨架 diff 流程重新移植, 或 --force" >&2
     exit 1
   fi
   # 逐文件应用(单文件失败不中断)
