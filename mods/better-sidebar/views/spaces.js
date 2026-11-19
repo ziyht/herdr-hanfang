@@ -304,7 +304,7 @@ export class Spaces {
   menu(w) {
     // A popup is as tall as its items; height is only the most.
     openOverlay({
-      mod: "menu-zh",
+      mod: "menu",
       kind: "popup",
       width: 200,
       height: 260,
@@ -385,7 +385,7 @@ export class Spaces {
       .px(8)
       .text_size(TEXT.small)
       .text_color(t.dim)
-      .child(collapsed ? "…" : "加载中…");
+      .child(collapsed ? "…" : "Loading…");
   }
 
   newSpaceRow(m, t, collapsed) {
@@ -402,7 +402,7 @@ export class Spaces {
       .hover((s) => s.bg(t.hover).text_color(t.foreground))
       .on_click(() => run("space.new", m ? { machine: m } : {}))
       .child(Icon("plus", 12))
-      .when(!collapsed, (el) => el.child("在此新建空间"));
+      .when(!collapsed, (el) => el.child("New space there"));
   }
 
   machineHeader(m, t, collapsed) {
@@ -431,13 +431,13 @@ export class Spaces {
         div()
           .flex_1()
           .truncate()
-          .child(m ?? "本机"),
+          .child(m ?? "This computer"),
       )
       .when(!connected, (el) =>
         el.child(
           div()
             .flex_none()
-            .child((machine?.state ?? "休眠").replace(/_/g, " ")),
+            .child((machine?.state ?? "asleep").replace(/_/g, " ")),
         ),
       )
       .when(connected, (el) => el.child(this.machineAddButton(m, t)))
@@ -471,7 +471,7 @@ export class Spaces {
   // name, and on the selected space how far it is from its remote.
   // The branch, quietly beside the name. main, master and the space's own name go without saying.
   branchName(g, name, t) {
-    const branch = g?.branch === "(detached)" ? "分离头指针" : (g?.branch ?? "分离头指针");
+    const branch = g?.branch === "(detached)" ? "detached" : (g?.branch ?? "detached");
     const shown = g && !USUAL_BRANCHES.has(branch) && branch !== name;
     return div()
       .flex_1()
@@ -529,7 +529,7 @@ export class Spaces {
       .text_size(TEXT.caption)
       .cursor_pointer()
       .tooltip(
-        `${pr.repository}#${pr.number} · ${status.label}\n${pr.title}\n${url}\n${shortcut}-点击打开`,
+        `${pr.repository}#${pr.number} · ${status.label}\n${pr.title}\n${url}\n${shortcut}-click to open`,
       )
       .on_mouse_down("left", (event, cx) => {
         if (!this.isPRLinkClick(event)) return;
@@ -590,12 +590,12 @@ export class Spaces {
       .h(20)
       .pl(tree ? 44 : 27)
       .items_center()
-      .tooltip(`PR 刷新失败：${status.error}`)
+      .tooltip(`PR refresh failed: ${status.error}`)
       .child(
         div()
           .text_size(TEXT.caption)
           .text_color(t.dim)
-          .child(status.prs.length ? "PR 信息可能过期" : "PR 不可用"),
+          .child(status.prs.length ? "PR may be stale" : "PR unavailable"),
       );
   }
   // ── Expanded/compact rows and sidebar rendering ──────────────────────────
@@ -761,7 +761,7 @@ export class Spaces {
     return IconButton({
       id: "space-new",
       icon: "plus",
-      label: "新建空间",
+      label: "New space",
       iconSize: 14,
       muted: true,
       onClick: () => run("space.new"),
@@ -777,7 +777,7 @@ export class Spaces {
       .justify_between()
       .text_size(TEXT.label)
       .text_color(t.dim)
-      .when(!collapsed, (el) => el.child("空间"))
+      .when(!collapsed, (el) => el.child("Spaces"))
       .child(this.newSpaceButton());
   }
 

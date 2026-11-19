@@ -62,13 +62,13 @@ const kidStatus = (k, listed) => {
   return s === "error" ? "blocked" : s === "done" ? "idle" : s;
 };
 const SORTS = [
-  { id: "priority", label: "优先级", icon: "clock" },
-  { id: "grouped", label: "按空间分组", icon: "layers" },
-  { id: "parent", label: "按主空间分组", icon: "git-branch" },
-  { id: "prefix", label: "按前缀分组", icon: "tag" },
+  { id: "priority", label: "Priority", icon: "clock" },
+  { id: "grouped", label: "Grouped by space", icon: "layers" },
+  { id: "parent", label: "Grouped by main space", icon: "git-branch" },
+  { id: "prefix", label: "Grouped by prefix", icon: "tag" },
 ];
 const sortOf = () => SORTS.find((s) => s.id === shared("agents.sort")) ?? SORTS[0];
-const SECTION = { 4: "需要你", 3: "已完成", 2: "进行中", 1: "空闲" };
+const SECTION = { 4: "Needs you", 3: "Done", 2: "Working", 1: "Idle" };
 const SECTION_STATUS = { 4: "blocked", 3: "done", 2: "working" };
 
 // PR-12, INS-4 and PLAT-work, also after a folder such as feature/INS-4: capitals
@@ -99,7 +99,7 @@ function grouping(sort, tabName) {
       const prefix = namePrefix(a.space_name, tabName(a));
       return prefix
         ? { id: `prefix-${prefix}`, label: `${prefix}-` }
-        : { id: "prefix-none", label: "无前缀" };
+        : { id: "prefix-none", label: "No prefix" };
     };
   return null;
 }
@@ -240,11 +240,11 @@ export class Agents {
       trigger: IconButton({
         id: "ag-sort",
         icon: sort.icon,
-        label: `Agent 排序：${sort.label}`,
+        label: `Sort agents: ${sort.label}`,
         iconSize: 14,
         muted: true,
       }),
-      children: [MenuLabel("Agent 排序"), ...this.sortOptions()],
+      children: [MenuLabel("Sort agents"), ...this.sortOptions()],
     });
   }
 
@@ -306,7 +306,7 @@ export class Agents {
       .child(this.status(t, { status: st }, compact));
   }
 
-  // compact: a ! for blocked where a header already says "需要你".
+  // compact: a ! for blocked where a header already says "Needs you".
   status(t, a, compact = false) {
     const color = t[a.status] ?? t.dim;
     if (a.status === "working")
@@ -336,7 +336,7 @@ export class Agents {
         .text_color(t.blocked)
         .flex()
         .items_center()
-        .child("需要你");
+        .child("Needs you");
     // Idle: a ring; done: a dot.
     if (a.status === "idle")
       return div()
@@ -440,7 +440,7 @@ export class Agents {
   // space are next to each other in agents(), so neighbours make a group.
   makeGroups(pinned, rest, groupOf, byPriority, urgency) {
     const groups = pinned.length
-      ? [{ id: "pinned", label: "已置顶", status: null, members: pinned }]
+      ? [{ id: "pinned", label: "Pinned", status: null, members: pinned }]
       : [];
     for (const a of rest) {
       const rank = urgency.get(a.address) || RANK.idle;
@@ -478,7 +478,7 @@ export class Agents {
       .text_size(TEXT.small)
       .text_color(t.dim)
       .child(
-        "还没有 agent 状态。agent 上报状态后会显示在这里。旧版本和 tmux 内的 agent 可能不会。",
+        "No agent status yet. Agents show up here when they report their status. Older versions and agents inside tmux may not.",
       );
   }
 
@@ -724,7 +724,7 @@ export class Agents {
       .text_color(t.dim)
       .cursor_pointer()
       .hover((s) => s.bg(t.hover).text_color(t.foreground))
-      .tooltip(pinned ? "取消置顶" : "置顶")
+      .tooltip(pinned ? "Unpin" : "Pin to the top")
       .on_click((_e, cx) => {
         cx.stop_propagation();
         this.setPins(pinned ? this.pins.filter((p) => p !== a.address) : [...this.pins, a.address]);

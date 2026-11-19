@@ -90,7 +90,7 @@ export async function treeMode() {
 export async function systemOpen(path) {
   const opener = window()?.platform === "windows" ? "explorer.exe" : window()?.platform === "linux" ? "xdg-open" : "open";
   const r = await exec(opener, [path]).catch((e) => ({ code: 1, stderr: String(e) }));
-  if (r.code !== 0) notify({ title: "无法打开", body: r.stderr || path, level: "error" });
+  if (r.code !== 0) notify({ title: "Cannot open", body: r.stderr || path, level: "error" });
 }
 
 // Whether `path` is the folder `root` or inside it.

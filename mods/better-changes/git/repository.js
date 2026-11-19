@@ -232,7 +232,7 @@ export const gitMethods = {
         this.reload = Date.now();
         setShared("better-changes.reload", { root, on: on ?? null, at: this.reload });
       } catch (error) {
-        this.note = `${action === "stage" ? "暂存" : "取消暂存"} failed: ${error.message}`;
+        this.note = `${action === "stage" ? "Stage" : "Unstage"} failed: ${error.message}`;
       } finally {
         this.busy = false;
         this.refresh(cx);
@@ -413,7 +413,7 @@ export const gitMethods = {
         }
       } catch (error) {
         if (this.isCurrent(context))
-          this.note = `${amend ? "修正" : "提交"} failed: ${error.message}`;
+          this.note = `${amend ? "Amend" : "Commit"} failed: ${error.message}`;
       } finally {
         this.busy = false;
         this.operation = null;

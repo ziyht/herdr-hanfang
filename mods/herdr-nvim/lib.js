@@ -42,7 +42,7 @@ function noticeIn(stdout) {
 export async function nvim(command, args = [], tab = null, { quiet = false } = {}) {
   const ctx = tab ? JSON.stringify(tab) : context();
   if (!ctx) {
-    notify({ title: "herdr-nvim", body: "请先打开一个 tab。", level: "warning" });
+    notify({ title: "herdr-nvim", body: "Open a tab first.", level: "warning" });
     return null;
   }
   try {
@@ -61,7 +61,7 @@ export async function nvim(command, args = [], tab = null, { quiet = false } = {
     }
     notify({ title: `herdr-nvim ${command} failed`, body: (r.stderr || r.stdout).trim().slice(-400), level: "error" });
   } catch (e) {
-    notify({ title: "herdr-nvim 未在此机器安装", body: `${bin()}: ${e}`, level: "error" });
+    notify({ title: "herdr-nvim is not installed here", body: `${bin()}: ${e}`, level: "error" });
   }
   return null;
 }

@@ -105,17 +105,17 @@ class PullRequests extends View {
     readTextFile(`${appHome()}/mods/better-changes/mod.json`)
       .then((raw) => (this.hasBetterChanges = raw !== null))
       .catch(() => {});
-    this.search = InputState.new({ placeholder: "搜索 · #482、文本、author:登录名" });
+    this.search = InputState.new({ placeholder: "Search · #482, text, author:login" });
     this.search.on("change", (_e, cx) => {
       if (!this.restoringSearch) this.searchChanged(cx);
     });
-    this.editor = TextareaState.new({ placeholder: "写一条评论…", rows: 4 });
+    this.editor = TextareaState.new({ placeholder: "Write a comment…", rows: 4 });
     this.editor.on("change", (_e, cx) => {
       if (this.draftKey) localStorage.setItem(this.draftKey, this.editor.value());
       cx.notify();
     });
     // Its own state, so a new comment stays put while a reply or handoff is being written.
-    this.newComment = TextareaState.new({ placeholder: "写一条评论…", rows: 4 });
+    this.newComment = TextareaState.new({ placeholder: "Write a comment…", rows: 4 });
     this.newComment.on("change", (_e, cx) => {
       if (this.commentKey) localStorage.setItem(this.commentKey, this.newComment.value());
       cx.notify();

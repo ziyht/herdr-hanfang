@@ -34,7 +34,7 @@ export async function pick(at) {
   if (out === null) return;
   const result = JSON.parse(out);
   if (result.empty) {
-    notify({ title: "herdr-nvim：没有可挑选的文件", body: result.empty, level: "warning", timeout: 8000 });
+    notify({ title: "herdr-nvim: nothing to pick", body: result.empty, level: "warning", timeout: 8000 });
     return;
   }
   openOverlay({
@@ -72,11 +72,11 @@ export class PickBar {
   render() {
     const t = theme();
     return h_flex().size_full().px(14).gap(14).items_center().bg(t.chrome).border_b(1).border_color(t.border).text_size(12.5)
-      .child(div().text_color(t.foreground).font_semibold().child("从 agent 输出中打开文件"))
+      .child(div().text_color(t.foreground).font_semibold().child("Open file from agent output"))
       .child(div().flex_1())
-      .child(keyChip(t, ["↑", "↓"], "移动"))
-      .child(keyChip(t, ["⏎"], "在 nvim 中打开"))
-      .child(keyChip(t, ["^U"], "清空"))
-      .child(keyChip(t, ["esc"], "关闭"));
+      .child(keyChip(t, ["↑", "↓"], "move"))
+      .child(keyChip(t, ["⏎"], "open in nvim"))
+      .child(keyChip(t, ["^U"], "clear"))
+      .child(keyChip(t, ["esc"], "close"));
   }
 }

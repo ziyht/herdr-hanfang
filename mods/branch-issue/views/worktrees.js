@@ -14,7 +14,7 @@ export const worktreeViewMethods = {
       : TextButton({
           id: "issue-start-work",
           icon: "checkout",
-          label: "创建 worktree",
+          label: "Create worktree",
           onClick: (cx) => this.startWork(cx),
         });
     const info = { key: "worktrees", label: "Worktrees", count: list.length, action };
@@ -39,7 +39,7 @@ export const worktreeViewMethods = {
             cx.notify();
           },
         })
-          .tooltip(space ? `切换到 ${worktree.path}` : `将 ${worktree.path} 作为空间打开`)
+          .tooltip(space ? `Switch to ${worktree.path}` : `Open ${worktree.path} as a space`)
           .child(div().flex_none().child(worktree.name))
           .child(
             div()
@@ -89,11 +89,11 @@ export const worktreeViewMethods = {
           h_flex()
             .gap(8)
             .items_center()
-            .child(div().w(62).flex_none().text_size(TEXT.small).text_color(t.dim).child("基于"))
+            .child(div().w(62).flex_none().text_size(TEXT.small).text_color(t.dim).child("From"))
             .child(
               this.chooser({
                 id: "issue-worktree-base-pick",
-                accessibilityLabel: "起始分支",
+                accessibilityLabel: "Branch to start from",
                 anchor: "top_left",
                 width: 280,
                 trigger: MenuButton({ id: "issue-worktree-base-trigger", label: form.base }).max_w(240),
@@ -134,7 +134,7 @@ export const worktreeViewMethods = {
       actions.child(
         this.chooser({
           id: "issue-worktree-launch",
-          prefix: "打开方式",
+          prefix: "Open with",
           label: current.name,
           accessibilityLabel: "Open the worktree with",
           width: 200,
@@ -148,7 +148,7 @@ export const worktreeViewMethods = {
     actions.child(
       Button({
         id: "issue-worktree-cancel",
-        label: form.path ? "已完成" : "取消",
+        label: form.path ? "Done" : "Cancel",
         disabled: form.busy,
         onClick: close,
       }),
@@ -157,7 +157,7 @@ export const worktreeViewMethods = {
       actions.child(
         Button({
           id: "issue-worktree-submit",
-          label: form.busy ? "Creating…" : "创建",
+          label: form.busy ? "Creating…" : "Create",
           primary: true,
           disabled: form.busy,
           onClick: (cx) => this.createWorktree(cx),

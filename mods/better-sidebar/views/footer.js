@@ -49,20 +49,20 @@ export class Footer {
       .border_t(1)
       .border_color(t.border)
       .child(
-        this.button("settings", "设置", () => run("app.settings"), t, [
+        this.button("settings", "Settings", () => run("app.settings"), t, [
           Icon("settings"),
           ...updateDot,
         ]),
       )
       .when(this.hasConfig, (el) =>
         el.child(
-          this.button("mod-settings", "Mod 设置", () => run("mod.open", { name: "better-config" }), t, [
+          this.button("mod-settings", "Mod settings", () => run("mod.open", { name: "better-config" }), t, [
             Icon("sliders"),
           ]),
         ),
       )
       .child(
-        this.button("machine", "添加机器", () => run("mod.open", { name: "machine-add" }), t, [
+        this.button("machine", "Add machine", () => run("mod.open", { name: "machine-add" }), t, [
           Icon("plus", 12),
           Icon("server"),
         ]),

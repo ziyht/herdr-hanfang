@@ -40,7 +40,7 @@ function togglePanel(action) {
   const panel = find(root, action.container);
   const stack = find(root, action.stack);
   if (!panel || !stack?.children?.some((child) => child.id === action.target))
-    throw Error("面板动作引用了不存在的容器、栈或子面板");
+    throw Error("Panel action references a missing container, stack, or child");
   if (isActive(action, root)) return run("layout.hide", { id: action.container });
   run("layout.select", { stack: action.stack, child: action.target });
   return run("layout.show", { id: action.container });
@@ -49,8 +49,8 @@ function togglePanel(action) {
 export function execute(action) {
   if (action?.type === "panel") return togglePanel(action);
   if (action?.type === "command") {
-    if (typeof action.name !== "string" || !action.name) throw Error("必须提供命令名");
+    if (typeof action.name !== "string" || !action.name) throw Error("Command name is required");
     return run(action.name, action.args ?? {});
   }
-  throw Error(`未知的 Better Tabs 动作类型： ${action?.type}`);
+  throw Error(`Unknown Better Tabs action type: ${action?.type}`);
 }

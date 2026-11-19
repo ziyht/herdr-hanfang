@@ -163,7 +163,7 @@ export const discoveryMethods = {
   async discoverRemotes(sp) {
     const options = { cwd: sp.folder, on: sp.machine };
     const result = await exec("git", ["remote"], options);
-    if (result.code !== 0) throw new Error("Cannot read Git 远程s for this directory.");
+    if (result.code !== 0) throw new Error("Cannot read Git remotes for this directory.");
     const names = [...new Set(result.stdout.trim().split(/\r?\n/).filter(Boolean))].sort();
     return Promise.all(
       names.map(async (name) => {

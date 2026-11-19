@@ -23,6 +23,9 @@ This product includes:
      mods/better-files, mods/branch-pr, mods/branch-issue from
      munza/herdr-mods (Apache License 2.0):
      https://github.com/munza/herdr-mods
+     Shipped as the English originals; zh-mods-patch/dicts/*.json provide
+     Chinese translations applied in place (dictionary-based string
+     replacement) at install time.
    - mods/herdr-nvim, mods/herdr-nvim-header from ChmaraX/herdr-nvim
      (MIT License): https://github.com/ChmaraX/herdr-nvim
      herdr-nvim-header is locally modified to reference the pane-zh header

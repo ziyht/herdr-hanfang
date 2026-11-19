@@ -39,7 +39,7 @@ export class PanelToggle {
       IconButton({
         id: "panel-toggle",
         icon: "panel-right",
-        label: panel.hidden ? "显示侧栏" : "隐藏侧栏",
+        label: panel.hidden ? "Show sidebar" : "Hide sidebar",
         iconSize: 16,
         muted: panel.hidden,
         onClick: () => this.toggle(),

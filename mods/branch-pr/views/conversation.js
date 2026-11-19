@@ -52,13 +52,13 @@ export const conversationMethods = {
           .child(
             this.chooser({
               id: "pr-author",
-              prefix: "作者",
+              prefix: "Author",
               label: this.author || "All",
-              accessibilityLabel: "按作者筛选",
+              accessibilityLabel: "Filter by author",
               anchor: "top_left",
               width: 220,
               small: true,
-              choices: authors.map((a) => ({ id: a || "all", label: a || "全部作者" })),
+              choices: authors.map((a) => ({ id: a || "all", label: a || "All authors" })),
               value: this.author || "all",
               triggerFocus: this.authorTrigger,
               onChoose: (id) => {
@@ -70,7 +70,7 @@ export const conversationMethods = {
           .child(
             TextButton({
               id: "pr-unresolved",
-              label: "未解决",
+              label: "Unresolved",
               active: Boolean(this.unresolved),
               onClick: (cx) => {
                 this.unresolved = !this.unresolved;
@@ -83,7 +83,7 @@ export const conversationMethods = {
             el.child(
               TextButton({
                 id: "pr-mark-read",
-                label: `标记 ${this.unreadIds.size} 条为已读`,
+                label: `Mark ${this.unreadIds.size} read`,
                 onClick: (cx) => {
                   this.markRead();
                   cx.notify();
@@ -102,7 +102,7 @@ export const conversationMethods = {
             el.child(
               this.agentButton({
                 id: "pr-send-unresolved",
-                label: `发送 ${unresolved} 条给 agent`,
+                label: `Send ${unresolved} to agent`,
                 send: (agent, cx) => this.sendUnresolved(agent, cx),
               }),
             ),
@@ -127,7 +127,7 @@ export const conversationMethods = {
               .child(who(comment)),
           )
           .when(Boolean(this.unreadIds?.has(comment.id)), (el) =>
-            el.child(div().flex_none().text_size(TEXT.caption).text_color(t.accent).child("新")),
+            el.child(div().flex_none().text_size(TEXT.caption).text_color(t.accent).child("New")),
           )
           .child(
             div()
@@ -143,18 +143,18 @@ export const conversationMethods = {
               IconButton({
                 id: `pr-copy-${comment.id}`,
                 icon: "copy",
-                label: "复制链接",
+                label: "Copy link",
                 small: true,
                 onClick: (cx) => {
                   cx.write_to_clipboard(comment.url);
-                  this.notice = "评论链接已复制。";
+                  this.notice = "Comment link copied.";
                   cx.notify();
                 },
               }),
             ),
           ),
       )
-      .child(Markdown(`pr-comment-${comment.id}`, comment.body || "没有评论内容。"));
+      .child(Markdown(`pr-comment-${comment.id}`, comment.body || "No comment text."));
   },
 
   entryActions(entry, comments) {
@@ -167,7 +167,7 @@ export const conversationMethods = {
       .child(
         TextButton({
           id: `pr-reply-${entry.id}`,
-          label: "回复",
+          label: "Reply",
           disabled: this.mutating || Boolean(thread && !thread.viewerCanReply),
           onClick: (cx) =>
             this.compose(thread ? "reply" : "comment", thread?.id, null, cx, {
@@ -181,7 +181,7 @@ export const conversationMethods = {
       row.child(
         TextButton({
           id: `pr-resolve-${entry.id}`,
-          label: thread.isResolved ? "重新打开" : "解决",
+          label: thread.isResolved ? "Reopen" : "Resolve",
           disabled: this.mutating,
           onClick: (cx) => this.mutate(thread.isResolved ? "reopen" : "resolve", cx, thread.id),
         }),
@@ -189,7 +189,7 @@ export const conversationMethods = {
     return row.child(div().flex_1()).child(
       this.agentButton({
         id: `pr-agent-send-${entry.id}`,
-        label: "发送给 agent",
+        label: "Send to agent",
         send: (agent, cx) =>
           this.compose("agent", thread?.id ?? entry.id, entryContext(entry), cx, {
             entry: entry.id,
@@ -206,7 +206,7 @@ export const conversationMethods = {
     if (!entries.length)
       body.child(
         Message(
-          this.author || this.unresolved ? "没有符合筛选条件的评论。" : "还没有评论。",
+          this.author || this.unresolved ? "No comments match these filters." : "No comments yet.",
         ),
       );
     entries.forEach((entry, i) => {
@@ -278,7 +278,7 @@ export const conversationMethods = {
       .py(10)
       .gap(8)
       .when(divided, (el) => el.mt(4).border_t(1).border_color(t.border))
-      .child(TextBox({ id: "pr-comment-input", state: this.newComment, label: "新评论" }))
+      .child(TextBox({ id: "pr-comment-input", state: this.newComment, label: "New comment" }))
       .child(
         h_flex()
           .justify_end()
@@ -320,11 +320,11 @@ export const conversationMethods = {
         div()
           .text_size(TEXT.caption)
           .text_color(t.dim)
-          .child("它正忙；你的消息已在它的会话中排队。"),
+          .child("It's busy; your message waits in its session."),
       );
     const disabled = this.mutating || !this.editor.value().trim() || (toAgent && !agent);
     return box
-      .child(TextBox({ id: "pr-inline-input", state: this.editor, label: "消息" }))
+      .child(TextBox({ id: "pr-inline-input", state: this.editor, label: "Message" }))
       .child(
         h_flex()
           .gap(8)
@@ -332,7 +332,7 @@ export const conversationMethods = {
           .child(
             Button({
               id: "pr-cancel",
-              label: "关闭",
+              label: "Close",
               disabled: this.mutating,
               onClick: (cx) => this.closeComposer(cx),
             }),

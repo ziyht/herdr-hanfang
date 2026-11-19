@@ -157,7 +157,7 @@
               "default": "~/.herdr/worktrees"
             },
             "open_with": {
-              "title": "打开方式",
+              "title": "Open with",
               "description": "What a new worktree opens: terminal, or an installed agent's key such as claude.",
               "type": "string",
               "default": "terminal"

@@ -23,17 +23,17 @@ import {
 } from "./ui.js";
 
 const SCOPES = [
-  { id: "mine", label: "我的议题" },
-  { id: "cycle", label: "当前周期" },
-  { id: "all", label: "全部议题" },
+  { id: "mine", label: "My issues" },
+  { id: "cycle", label: "Active cycle" },
+  { id: "all", label: "All issues" },
 ];
 const STATES = [
-  { id: "active", label: "进行中" },
-  { id: "backlog", label: "待办" },
+  { id: "active", label: "Active" },
+  { id: "backlog", label: "Backlog" },
   { id: "started", label: "Started" },
-  { id: "done", label: "已完成" },
-  { id: "cancelled", label: "已取消" },
-  { id: "all", label: "全部状态" },
+  { id: "done", label: "Done" },
+  { id: "cancelled", label: "Cancelled" },
+  { id: "all", label: "All states" },
 ];
 const labelOf = (choices, id) => choices.find((c) => c.id === id)?.label ?? "";
 
@@ -54,7 +54,7 @@ export const listMethods = {
             TextButton({
               id: "issue-retry",
               icon: "refresh",
-              label: "重试",
+              label: "Retry",
               disabled: this.busy || this.mutating,
               onClick: (cx) => this.refresh(cx),
             }),
@@ -83,7 +83,7 @@ export const listMethods = {
     return IconButton({
       id: "issue-refresh",
       icon: "refresh",
-      label: "刷新议题",
+      label: "Refresh issues",
       spinning: Boolean(this.busy),
       disabled: this.busy || this.mutating,
       onClick: (cx) => this.refresh(cx),
@@ -121,7 +121,7 @@ export const listMethods = {
           .child(
             HeaderTab({
               id: "issue-view-branch",
-              label: "分支",
+              label: "Branch",
               count: this.branchIssues.length,
               loading: !this.branchLoaded,
               disabled: !this.branchLoaded,
@@ -132,7 +132,7 @@ export const listMethods = {
           .child(
             HeaderTab({
               id: "issue-view-all",
-              label: "全部",
+              label: "All",
               count: `${this.items.length}${this.cursor ? "+" : ""}`,
               loading: this.allCountPending(),
               disabled: !this.listLoaded,
@@ -166,7 +166,7 @@ export const listMethods = {
         pick(
           "issue-scope",
           labelOf(SCOPES, this.scope),
-          "查看谁的议题",
+          "Whose issues",
           150,
           SCOPES,
           this.scope,
@@ -181,7 +181,7 @@ export const listMethods = {
         pick(
           "issue-state",
           labelOf(STATES, this.state),
-          "工作流状态",
+          "Workflow state",
           130,
           STATES,
           this.state,
@@ -194,14 +194,14 @@ export const listMethods = {
       );
     if (this.teams.length > 1) {
       const teams = [
-        { id: "any", label: "全部团队" },
+        { id: "any", label: "All teams" },
         ...this.teams.map((team) => ({ id: team.key, label: team.name })),
       ];
       choosers.child(
         pick(
           "issue-team",
           labelOf(teams, this.team || "any"),
-          "团队",
+          "Team",
           200,
           teams,
           this.team || "any",
@@ -226,7 +226,7 @@ export const listMethods = {
   },
 
   issueRow(issue, t) {
-    const owner = person(issue.assignee) || "未分配";
+    const owner = person(issue.assignee) || "Unassigned";
     const where = issue.project?.name;
     return IssueRow({
       id: `issue-${issue.id}`,
@@ -248,8 +248,8 @@ export const listMethods = {
   branchEmpty() {
     const t = theme();
     const box = v_flex().p(8).gap(10).min_w(0);
-    if (!this.branch) return box.child(Message("切到一个分支才能看到它的议题。"));
-    box.child(Message(`没有找到 ${this.branch} 的议题。`));
+    if (!this.branch) return box.child(Message("Check out a branch to see its issue."));
+    box.child(Message(`No issue found for ${this.branch}.`));
     return box.child(
       h_flex()
         .id("issue-link-row")
@@ -261,7 +261,7 @@ export const listMethods = {
           SmallButton({
             id: "issue-link",
             icon: "link",
-            label: "关联议题",
+            label: "Link issue",
             disabled: this.mutating,
             onClick: (cx) => this.linkIssue(cx),
           }),
@@ -271,7 +271,7 @@ export const listMethods = {
 
   branchList(t) {
     if (!this.branchIssues.length && this.branchLoading)
-      return Busy("正在加载此分支的议题…");
+      return Busy("Loading this branch's issues…");
     const list = v_flex()
       .id("issue-branch-list")
       .flex_1()
@@ -285,14 +285,14 @@ export const listMethods = {
 
   // Linear does the matching, including identifiers and bare numbers.
   allList(t) {
-    if (!this.items.length && this.busy) return Busy("正在加载议题…");
+    if (!this.items.length && this.busy) return Busy("Loading issues…");
     const list = v_flex()
       .id(`issue-list-${this.listKey()}`)
       .flex_1()
       .min_h(0)
       .overflow_y_scrollbar()
       .p(6);
-    if (!this.items.length) list.child(Message("没有匹配的议题。"));
+    if (!this.items.length) list.child(Message("No matching issues."));
     stateGroups(this.items).forEach((group, i) => {
       const key = `state:${group.name}`;
       const open = !this.closedGroups.has(key);
@@ -318,7 +318,7 @@ export const listMethods = {
           .justify_center()
           .text_size(TEXT.small)
           .text_color(t.muted)
-          .child(this.loading ? "加载中…" : "+ 更多"),
+          .child(this.loading ? "Loading…" : "+ more"),
       );
     return list;
   },
@@ -362,14 +362,14 @@ export const listMethods = {
             .child(
               Button({
                 id: "issue-get-key",
-                label: "创建 key",
+                label: "Create a key",
                 onClick: (cx) => cx.open_url("https://linear.app/settings/api"),
               }),
             )
             .child(
               Button({
                 id: "issue-key-retry",
-                label: this.busy ? "检查中…" : "重试",
+                label: this.busy ? "Checking…" : "Try again",
                 primary: true,
                 disabled: this.busy,
                 onClick: (cx) => {
@@ -389,7 +389,7 @@ export const listMethods = {
     this.messages(root);
     if (this.showsBack(this.opening.identifier))
       root.child(h_flex().flex_none().px(8).py(5).child(this.backButton()));
-    root.child(Busy(`正在加载 ${this.opening.identifier}…`));
+    root.child(Busy(`Loading ${this.opening.identifier}…`));
     return root.child(this.footer());
   },
 
@@ -411,13 +411,13 @@ export const listMethods = {
           .flex_1()
           .min_w(0)
           .truncate()
-          .child(this.branch || (this.branchLoading ? "正在查找分支…" : "No branch")),
+          .child(this.branch || (this.branchLoading ? "Finding branch…" : "No branch")),
       )
       .child(
         div()
           .flex_none()
           .tooltip(this.lastUpdated ? new Date(this.lastUpdated).toLocaleString() : "")
-          .child(this.busy ? "正在更新…" : this.updatedLabel()),
+          .child(this.busy ? "Updating…" : this.updatedLabel()),
       );
   },
 };

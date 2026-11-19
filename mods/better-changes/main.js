@@ -87,7 +87,7 @@ class BetterChanges extends View {
         const { settings } = await loadSettings("better-changes", DEFAULT_SETTINGS);
         const commands = panelCommands(layout(), "better-changes", settings.panel.toggle);
         if (commands) for (const [name, args] of commands) run(name, args);
-        else notify({ title: "Better Changes 不在当前布局中" });
+        else notify({ title: "Better Changes isn't in this layout" });
       } finally {
         closeOverlay(overlay);
       }
@@ -105,7 +105,7 @@ class BetterChanges extends View {
     this.amendHead = null;
     this.typing = false;
     // Enter makes a new line here; only the button commits.
-    this.input = TextareaState.new({ placeholder: "提交信息", rows: 4 });
+    this.input = TextareaState.new({ placeholder: "Commit message", rows: 4 });
     this.input.on("change", (_e, cx) => {
       this.message = this.input.value();
       this.messageRevision++;

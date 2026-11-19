@@ -70,7 +70,7 @@ export const tabBarMethods = {
         cx.stop_propagation();
         this.cancelDrags(cx);
         openOverlay({
-          mod: "menu-zh",
+          mod: "menu",
           kind: "popup",
           width: 200,
           props: { tab: "tab", target: { id: tab.id, space: space.id } },
@@ -97,7 +97,7 @@ export const tabBarMethods = {
   },
 
   closeTabButton(tab) {
-    return this.simple(`close-${tab.id}`, Icon("close", 12), "关闭 tab", (_e, cx) => {
+    return this.simple(`close-${tab.id}`, Icon("close", 12), "Close tab", (_e, cx) => {
       this.cancelDrags(cx);
       run("tab.close", { id: tab.id });
     }).on_mouse_up("left", (_e, cx) => cx.stop_propagation());
@@ -213,8 +213,8 @@ export const tabBarMethods = {
   // Dropping a tab on the + puts it last.
   newTabButton(tabs) {
     const asLast = (event) => ({ ...event, local_position: { x: Infinity } });
-    return this.simple("tab-new", Icon("plus", 14), "新建 tab", () =>
-      openOverlay({ mod: "new-menu-zh", kind: "popup", width: 250, height: 512 }),
+    return this.simple("tab-new", Icon("plus", 14), "New tab", () =>
+      openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 }),
     )
       .on_mouse_move((event, cx) => {
         if (tabs.length) this.hoverTab(tabs.at(-1), asLast(event), cx);
@@ -261,7 +261,7 @@ export const tabBarMethods = {
     return this.simple(
       "actions-more",
       Icon("more-vertical", 16),
-      "更多操作 · 把工具栏按钮拖到这里即可隐藏",
+      "More actions · drop a toolbar action here to hide it",
       () => this.openActions(overflow),
     )
       .when(drag?.active && drag.target?.kind === "overflow", (el) =>
@@ -286,16 +286,16 @@ export const tabBarMethods = {
     const w = window();
     const windows = w.platform === "windows";
     return [
-      this.simple("minimize", windows ? Icon("win-min", 16) : "−", "最小化", () =>
+      this.simple("minimize", windows ? Icon("win-min", 16) : "−", "Minimize", () =>
         run("window.minimize"),
       ),
       this.simple(
         "maximize",
         windows ? Icon(w.maximized ? "win-restore" : "win-max", 16) : "□",
-        "最大化",
+        "Maximize",
         () => run("window.maximize"),
       ),
-      this.simple("close-window", Icon("close", 13), "关闭窗口", () => run("window.close")),
+      this.simple("close-window", Icon("close", 13), "Close window", () => run("window.close")),
     ];
   },
 };

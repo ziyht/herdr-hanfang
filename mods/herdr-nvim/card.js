@@ -40,13 +40,13 @@ function keyFor(keys, command) {
 export function welcomeRows(keys, config) {
   const nvimTree = config.tree === "nvim";
   const rows = [
-    [keyFor(keys, "mod.open:herdr-nvim"), nvimTree ? "打开或关闭 nvim" : "打开或关闭文件树和 nvim"],
-    [keyFor(keys, "herdr-nvim.pick"), "打开 agent 最近操作的文件"],
+    [keyFor(keys, "mod.open:herdr-nvim"), nvimTree ? "open or close nvim" : "open or close the tree and nvim"],
+    [keyFor(keys, "herdr-nvim.pick"), "open a file the agent touched"],
   ];
   if (!nvimTree) {
-    rows.push([keyFor(keys, "herdr-nvim.reveal"), "跳到文件树"]);
-    if (config.tree_key) rows.push([config.tree_key, "显示或隐藏文件树"]);
-    rows.push(["?", "文件树全部按键"]);
+    rows.push([keyFor(keys, "herdr-nvim.reveal"), "jump into the tree"]);
+    if (config.tree_key) rows.push([config.tree_key, "show or hide the tree"]);
+    rows.push(["?", "all tree keys"]);
   }
   return rows.filter(([key]) => key);
 }
@@ -79,7 +79,7 @@ export class Card {
     if (card.kind === "nvim") {
       run("terminal.open", {
         argv: [`${appHome()}/mods/herdr-nvim/bin/herdr-nvim`, "app-install-nvim", "--pause"],
-        place: "tab", name: "安装 Neovim",
+        place: "tab", name: "Install Neovim",
       });
     }
   }
@@ -102,23 +102,23 @@ export class Card {
     const title = (text) => h_flex().items_center().child(div().flex_1().text_size(15).font_semibold().child(text))
       .child(div().text_size(11).text_color(t.dim).child("Esc"));
     if (card.kind === "nvim") {
-      const what = card.found ? `\`${card.bin}\` 是 Neovim ${card.found}` : `\`${card.bin}\` 未找到`;
+      const what = card.found ? `\`${card.bin}\` is Neovim ${card.found}` : `\`${card.bin}\` was not found`;
       return shell
-        .child(title(`需要 Neovim ${card.need ?? "0.10"} 或更新版本`))
-        .child(div().text_color(t.muted).child(`herdr-nvim 用它运行每个 tab 的 nvim，而 ${what}。`))
+        .child(title(`Neovim ${card.need ?? "0.10"} or newer is needed`))
+        .child(div().text_color(t.muted).child(`herdr-nvim runs each tab's nvim with it, and ${what}.`))
         .child(div().text_size(11.5).text_color(t.dim).child(
-          "安装会打开一个终端 tab 来安装：优先 Homebrew（brew install neovim），否则用 Neovim 官方 release 装到 ~/.local/share/herdr-nvim/nvim，无需 sudo。装好后再按一次 cmd-e。"))
+          "Install opens a terminal tab that installs it: with Homebrew (brew install neovim), else Neovim's own release into ~/.local/share/herdr-nvim/nvim, no sudo. Then press cmd-e again."))
         .child(h_flex().pt(8).gap(8).justify_end()
-          .child(button("card-cancel", "暂不", false, () => this.close()))
-          .child(button("card-install", "安装 Neovim", true, () => this.submit())));
+          .child(button("card-cancel", "Not now", false, () => this.close()))
+          .child(button("card-install", "Install Neovim", true, () => this.submit())));
     }
     return shell
-      .child(title("nvim 已就绪"))
+      .child(title("nvim is ready"))
       .child(v_flex().gap(6).pt(4).children(card.rows.map(([key, what]) => h_flex().gap(12)
         .child(div().w(110).flex_none().child(mono(key)))
         .child(div().flex_1().min_w(0).child(what)))))
       .child(div().pt(4).text_size(11.5).text_color(t.dim).child(
-        `按键：~/.config/herdr-app/keys.json · 设置：${card.config.replace(/^\/Users\/[^/]+|^\/home\/[^/]+/, "~")}`))
-      .child(h_flex().pt(8).justify_end().child(button("card-ok", "知道了", true, () => this.submit())));
+        `Keys: ~/.config/herdr-app/keys.json · Settings: ${card.config.replace(/^\/Users\/[^/]+|^\/home\/[^/]+/, "~")}`))
+      .child(h_flex().pt(8).justify_end().child(button("card-ok", "Got it", true, () => this.submit())));
   }
 }

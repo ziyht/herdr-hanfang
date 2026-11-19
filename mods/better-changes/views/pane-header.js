@@ -108,7 +108,7 @@ export const paneHeaderMethods = {
             .text_size(10.5)
             .font_semibold()
             .text_color(t.blocked)
-            .child("需要你"),
+            .child("Needs you"),
         ),
       )
       .when(p.status === "done", (el) => el.child(div().size(7).flex_none().rounded(4).bg(t.done)))

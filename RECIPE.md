@@ -41,10 +41,14 @@
 - 中文 mod(9 个,-zh 家族,基于 0.1.16 源码翻译):workspace-chrome-zh、
   workspace-status-zh、menu-zh、toast-zh、machine-add-zh、picker-zh、
   worktree-zh、pane-zh、files-zh(供 herdr-nvim 还原原面板)
-- 社区 mod(8 个,原样打包):better-sidebar / better-tabs / better-changes /
+- 社区 mod(8 个,英文原版打包):better-sidebar / better-tabs / better-changes /
   better-files(munza/herdr-mods,Apache-2.0)、branch-pr(munza,需 GitHub CLI)、
   branch-issue(munza,需 LINEARAPIKEY 环境变量)、
   herdr-nvim / herdr-nvim-header(ChmaraX/herdr-nvim,MIT;header 已改为引用 pane-zh)
+- `zh-mods-patch/`(社区面板中文化):字典式就地翻译引擎 + 6 个字典
+  (better-sidebar 47 / better-tabs 15 / better-changes 62 / herdr-nvim 82 /
+  branch-pr 149 / branch-issue 105 条,共约 460 条译文)。社区 mod 是用户文件,
+  保存即热重载,无需重启;发给 agent 的 prompt 刻意保留英文(对 LLM 更稳)
 - 可选键位(合并进 keys.json 的 global 段):
   `"cmd-e": "mod.open:herdr-nvim"`、`"cmd-o": "herdr-nvim.pick"`、
   `"cmd-shift-e": "herdr-nvim.reveal"`
@@ -69,4 +73,6 @@
 - `layout.switch {"name":"hanfang"}` 后:侧栏显示分支与 PR 状态,
   标签栏可拖动换行,右键终端出中文菜单,状态栏显示「N 个 agent」
 - ⌘E 打开 nvim 文件树(装好 Neovim 后);面板五个标签页可切换
+- zh-mods-patch 应用后:变更、PR、议题面板与 nvim 文件树的界面文案为中文
+  (发给 agent 的 prompt 保持英文)
 - zh-patch 应用并重启后,设置页与命令面板为中文

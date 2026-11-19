@@ -20,16 +20,16 @@ import {
 } from "./ui.js";
 
 const SCOPES = [
-  { id: "all", label: "全部 PR" },
-  { id: "mine", label: "我创建的" },
-  { id: "involved", label: "我参与的" },
+  { id: "all", label: "All PRs" },
+  { id: "mine", label: "Created" },
+  { id: "involved", label: "Involved" },
 ];
 const STATES = [
-  { id: "open", label: "开放中" },
-  { id: "draft", label: "草稿" },
-  { id: "merged", label: "已合并" },
-  { id: "closed", label: "已关闭" },
-  { id: "all", label: "全部" },
+  { id: "open", label: "Open" },
+  { id: "draft", label: "Draft" },
+  { id: "merged", label: "Merged" },
+  { id: "closed", label: "Closed" },
+  { id: "all", label: "All" },
 ];
 const labelOf = (choices, id) => choices.find((c) => c.id === id)?.label ?? "";
 
@@ -53,7 +53,7 @@ export const listMethods = {
             TextButton({
               id: "pr-retry",
               icon: "refresh",
-              label: "重试",
+              label: "Retry",
               disabled: this.busy || this.mutating,
               onClick: (cx) => this.refresh(cx),
             }),
@@ -82,7 +82,7 @@ export const listMethods = {
     return IconButton({
       id: "pr-refresh",
       icon: "refresh",
-      label: "刷新 pull request",
+      label: "Refresh pull requests",
       spinning: Boolean(this.busy),
       disabled: this.busy || this.mutating,
       onClick: (cx) => this.refresh(cx),
@@ -122,7 +122,7 @@ export const listMethods = {
           .child(
             HeaderTab({
               id: "pr-view-branch",
-              label: "分支",
+              label: "Branch",
               count: this.branchPRs.length,
               loading: !this.branchLoaded,
               disabled: !this.branchLoaded,
@@ -133,7 +133,7 @@ export const listMethods = {
           .child(
             HeaderTab({
               id: "pr-view-all",
-              label: "仓库",
+              label: "Repo",
               // GitHub's count for the current filter; Involved has none, so what's loaded.
               count: this.total ?? `${this.items.length}${more}`,
               loading: this.repoCountPending(),
@@ -154,7 +154,7 @@ export const listMethods = {
         this.chooser({
           id: "pr-scope",
           label: labelOf(SCOPES, this.tab),
-          accessibilityLabel: "查看谁的 PR",
+          accessibilityLabel: "Whose pull requests",
           anchor: "top_left",
           width: 130,
           choices: SCOPES,
@@ -170,7 +170,7 @@ export const listMethods = {
         this.chooser({
           id: "pr-state",
           label: labelOf(STATES, this.state),
-          accessibilityLabel: "PR 状态",
+          accessibilityLabel: "Pull request state",
           anchor: "top_left",
           width: 120,
           choices: STATES,
@@ -187,13 +187,13 @@ export const listMethods = {
       choosers.child(
         this.chooser({
           id: "pr-remote",
-          label: this.remote || "远程",
-          accessibilityLabel: "Git 远程",
+          label: this.remote || "Remote",
+          accessibilityLabel: "Git remote",
           width: 240,
           choices: this.remotes.map((r) => ({
             id: r.name,
             label: r.name,
-            detail: r.repo || "不是 GitHub 远程",
+            detail: r.repo || "Not a GitHub remote",
             disabled: !r.repo,
           })),
           value: this.remote,
@@ -206,7 +206,7 @@ export const listMethods = {
         IconButton({
           id: "pr-repo-github",
           icon: "github",
-          label: `在 GitHub 上打开 ${this.repo}`,
+          label: `Open ${this.repo} on GitHub`,
           onClick: (cx) => cx.open_url(repoUrl(this.repo)),
         }),
       );
@@ -235,7 +235,7 @@ export const listMethods = {
         checks &&
         Icon(`check-${checks.kind}`, 14)
           .text_color(t[checks.color])
-          .accessibility_label(`检查：${checks.label}`),
+          .accessibility_label(`Checks: ${checks.label}`),
       onClick: (cx) => {
         this.composer = null;
         this.author = "";
@@ -250,14 +250,14 @@ export const listMethods = {
   },
 
   branchList(t) {
-    if (!this.branchPRs.length && this.branchLoading) return Busy("正在加载此分支的 PR…");
+    if (!this.branchPRs.length && this.branchLoading) return Busy("Loading this branch's PRs…");
     const list = v_flex().id("pr-branch-list").flex_1().min_h(0).overflow_y_scrollbar().p(6).gap(2);
     if (!this.branchPRs.length)
       list.child(
         Message(
           this.branch
-            ? `没有来自 ${this.branch} 的 PR。`
-            : "切到一个分支才能看到它的 PR。",
+            ? `No pull requests from ${this.branch}.`
+            : "Check out a branch to see its pull requests.",
         ),
       );
     return list.children(this.branchPRs.map((p) => this.prRow(p, t, p.repository ?? this.repo)));
@@ -266,12 +266,12 @@ export const listMethods = {
   // GitHub owns matching, including qualifiers and matches in PR bodies.
   moreLabel() {
     const left = (this.total ?? 0) - this.items.length;
-    if (left <= 0) return "+ 更多";
+    if (left <= 0) return "+ more";
     return `+ ${Math.min(left, this.settings.list.page_size)} more`;
   },
 
   allList(t) {
-    if (!this.items.length && this.busy) return Busy("正在加载 PR…");
+    if (!this.items.length && this.busy) return Busy("Loading pull requests…");
     const list = v_flex()
       .id(`pr-list-${this.listKey()}`)
       .flex_1()
@@ -281,7 +281,7 @@ export const listMethods = {
       .gap(2);
     if (!this.items.length)
       list.child(
-        Message(!this.repo ? "打开一个带 GitHub 远程的文件夹。" : "没有匹配的 PR。"),
+        Message(!this.repo ? "Open a folder with a GitHub remote." : "No matching pull requests."),
       );
     list.children(this.items.map((p) => this.prRow(p, t, p.headRefName)));
     if (Object.keys(this.cursors).length > 0)
@@ -293,7 +293,7 @@ export const listMethods = {
           .justify_center()
           .text_size(TEXT.small)
           .text_color(t.muted)
-          .child(this.loading ? "加载中…" : this.moreLabel()),
+          .child(this.loading ? "Loading…" : this.moreLabel()),
       );
     return list;
   },
@@ -338,7 +338,7 @@ export const listMethods = {
               el.child(
                 Button({
                   id: "pr-get-gh",
-                  label: "获取 GitHub CLI",
+                  label: "Get GitHub CLI",
                   onClick: (cx) => cx.open_url("https://cli.github.com"),
                 }),
               ),
@@ -346,7 +346,7 @@ export const listMethods = {
             .child(
               Button({
                 id: "pr-gh-retry",
-                label: this.busy ? "检查中…" : "重试",
+                label: this.busy ? "Checking…" : "Try again",
                 primary: true,
                 disabled: this.busy,
                 onClick: (cx) => {

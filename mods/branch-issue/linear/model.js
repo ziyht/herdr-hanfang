@@ -33,10 +33,10 @@ export function searchQuery(text) {
 
 export function timeAgo(iso, now = Date.now()) {
   const minutes = Math.floor((now - new Date(iso).getTime()) / 60000);
-  if (!(minutes >= 1)) return "刚刚";
-  if (minutes < 60) return `${minutes} 分钟前`;
-  if (minutes < 1440) return `${Math.floor(minutes / 60)} 小时前`;
-  return `${Math.floor(minutes / 1440)} 天前`;
+  if (!(minutes >= 1)) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1440) return `${Math.floor(minutes / 60)}h ago`;
+  return `${Math.floor(minutes / 1440)}d ago`;
 }
 
 // The helper's plain words for a key that can't be used at all, which is worth a
@@ -44,15 +44,15 @@ export function timeAgo(iso, now = Date.now()) {
 export function keyProblem(message) {
   if (/LINEAR_API_KEY is not set/.test(message ?? ""))
     return {
-      title: "没有 Linear API key",
+      title: "No Linear API key",
       detail:
-        "此面板从你的 shell 读取 LINEAR_API_KEY。请创建一个 key 并 export，然后重试。",
+        "This panel reads LINEAR_API_KEY from your shell. Create a key, export it, then try again.",
       command: "export LINEAR_API_KEY=…",
     };
   if (/rejected LINEAR_API_KEY/.test(message ?? ""))
     return {
-      title: "Linear 拒绝了该 API key",
-      detail: "LINEAR_API_KEY 已失效。请新建一个 key 并 export，然后重试。",
+      title: "Linear rejected the API key",
+      detail: "LINEAR_API_KEY isn't valid any more. Create a new key, export it, then try again.",
       command: "export LINEAR_API_KEY=…",
     };
   return null;
@@ -87,7 +87,7 @@ export function workflowOrder(states) {
 export function stateGroups(items) {
   const groups = new Map();
   for (const item of items) {
-    const name = item.state?.name ?? "无状态";
+    const name = item.state?.name ?? "No state";
     if (!groups.has(name)) groups.set(name, { name, state: item.state, items: [] });
     groups.get(name).items.push(item);
   }
@@ -114,7 +114,7 @@ export function linkedPRs(issue) {
         ...a,
         number,
         status,
-        label: status ? status[0].toUpperCase() + status.slice(1) : "已关联",
+        label: status ? status[0].toUpperCase() + status.slice(1) : "Linked",
         tone: merged ? "good" : status === "closed" ? "danger" : status ? "waiting" : "none",
       };
     });
@@ -130,10 +130,10 @@ export function issueStats(issue) {
       ? [
           {
             key: "children",
-            label: "子任务",
+            label: "Sub-issues",
             value: `${done}/${children.length}`,
             tone: done === children.length ? "good" : "waiting",
-            detail: `${done} / ${pad(children.length, "子任务", "子任务")} 完成`,
+            detail: `${done} of ${pad(children.length, "sub-issue")} done`,
           },
         ]
       : []),

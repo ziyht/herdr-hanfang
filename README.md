@@ -34,13 +34,23 @@ GitHub CLI(branch-pr)、`LINEARAPIKEY` 环境变量(branch-issue)。
 
 不需要改 Herdr.app 本体。
 
-以上完成后,窗口界面(侧栏、标签栏、面板、右键菜单、通知)即为中文。
-若还要**设置页、命令面板、欢迎页**等原生界面也是中文(推荐),
-继续执行下面「可选:原生界面中文化」一节的 zh-patch 两步(cp + apply.sh)。
+以上完成后,窗口框架(侧栏、标签栏、右键菜单、通知)即为中文。继续两步得到完整中文:
 
-> 给安装代理:zh-patch 会原地替换并锁定应用自带的 9 个界面文件,
-> 执行前先 `herdr-app --version` 确认目标机是 0.1.16(译文按此版本逐行对齐,
-> 其它版本需先重新移植),并向用户说明这一操作及其回滚方式(`--restore`)。
+**第二步:社区面板中文化**(better-*、branch-*、herdr-nvim 的界面文案;
+mod 是用户文件,保存即热重载,无需重启):
+
+```sh
+cp -R zh-mods-patch ~/.config/herdr-app/
+~/.config/herdr-app/zh-mods-patch/apply.sh
+```
+
+**第三步(可选):原生界面中文化**——设置页、命令面板、欢迎页等,
+见下节 zh-patch。
+
+> 给安装代理:zh-mods-patch 按字典就地修改已安装社区 mod 的文案
+> (幂等,pristine/ 快照自动生成,`--restore` 可还原);zh-patch 会原地替换
+> 并锁定应用自带的 9 个界面文件,执行前先 `herdr-app --version` 确认目标机
+> 是 0.1.16(译文按此版本逐行对齐),并向用户说明操作与回滚方式。
 
 ## 可选:原生界面中文化(zh-patch)
 

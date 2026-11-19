@@ -99,7 +99,7 @@ export const worktreeMethods = {
 
   // Terminal plus each installed agent; the chosen one starts in the worktree's first tab.
   launchChoices(form) {
-    return [{ key: "terminal", name: "终端" }, ...form.agents];
+    return [{ key: "terminal", name: "Terminal" }, ...form.agents];
   },
 
   createWorktree(cx) {
@@ -109,7 +109,7 @@ export const worktreeMethods = {
     const name = form.name.value().trim();
     form.error = null;
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) {
-      form.error = "worktree 名称只能用字母、数字、点、横线或下划线。";
+      form.error = "Use letters, numbers, dots, dashes or underscores for the worktree name.";
       cx.notify();
       return;
     }
@@ -120,12 +120,12 @@ export const worktreeMethods = {
       const git = async (args) => {
         const result = await exec("git", args, { cwd: sp.folder, on: sp.machine });
         if (result.code !== 0)
-          throw new Error(result.stderr?.trim() || result.stdout?.trim() || "Git 命令失败。");
+          throw new Error(result.stderr?.trim() || result.stdout?.trim() || "Git command failed.");
         return result.stdout.trim();
       };
       try {
         const checked = await git(["check-ref-format", "--branch", branch]);
-        if (checked !== branch) throw new Error("请输入字面分支名。");
+        if (checked !== branch) throw new Error("Enter a literal branch name.");
         const remotes = (await git(["remote"])).split("\n").filter(Boolean);
         let url;
         for (const remote of remotes) {
@@ -139,7 +139,7 @@ export const worktreeMethods = {
         }
         if (!url)
           throw new Error(
-            "此空间没有该 PR 仓库的远程。请先打开该仓库的一个空间。",
+            "This space has no remote for this PR’s repository. Open a space for that repository first.",
           );
         const existing = await exec(
           "git",
@@ -147,9 +147,9 @@ export const worktreeMethods = {
           { cwd: sp.folder, on: sp.machine },
         );
         if (existing.code === 0)
-          throw new Error("该分支已存在。请换一个分支名。");
+          throw new Error("That branch already exists. Choose a new branch name.");
         if (existing.code !== 1)
-          throw new Error(existing.stderr?.trim() || "无法检查现有分支。");
+          throw new Error(existing.stderr?.trim() || "Could not check existing branches.");
         let userHome = home();
         if (sp.machine) {
           let result = await exec("sh", ["-c", 'printf %s "$HOME"'], { on: sp.machine });
@@ -172,7 +172,7 @@ export const worktreeMethods = {
           throw new Error("The PR has no valid head commit.");
         await git(["fetch", "--no-tags", "--", url, `refs/pull/${pr.number}/head`]);
         if ((await git(["rev-parse", "FETCH_HEAD"])) !== latest.headRefOid)
-          throw new Error("The PR changed while fetching. 重试.");
+          throw new Error("The PR changed while fetching. Try again.");
         await git(["worktree", "add", "-b", branch, "--", path, latest.headRefOid]);
         // Retain the checkout if opening its terminal fails, so retry cannot create it twice.
         form.path = path;

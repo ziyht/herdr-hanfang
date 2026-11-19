@@ -29,7 +29,7 @@ export const menuMethods = {
       .text_size(menu ? TEXT.menu : TEXT.button)
       .bg(active ? t.selected : menu ? t.popover : t.chrome)
       .text_color(active ? t.foreground : t.muted)
-      .tooltip(menu ? `${tooltip} · 拖出或置顶即可在工具栏显示` : tooltip)
+      .tooltip(menu ? `${tooltip} · Drag out or pin to show in toolbar` : tooltip)
       .accessibility_label(label)
       .cursor_pointer()
       .hover((s) => s.bg(t.hover))
@@ -68,7 +68,7 @@ export const menuMethods = {
   },
 
   pinButton(entry) {
-    return this.simple(`pin-${entry.id}`, Icon("pin", 13), "在工具栏显示", () => {
+    return this.simple(`pin-${entry.id}`, Icon("pin", 13), "Show in toolbar", () => {
       setShared(DRAG_KEY, null);
       this.pinAction(entry);
       closeOverlay(props().overlay);
@@ -99,8 +99,8 @@ export const menuMethods = {
           .items_center()
           .text_size(TEXT.menu)
           .text_color(t.dim)
-          .tooltip("把工具栏按钮拖到 ⋮ 上即可隐藏到这里。")
-          .child("没有隐藏的按钮"),
+          .tooltip("Drag a toolbar action onto ⋮ to hide it here.")
+          .child("No hidden actions"),
       );
     list.children(entries.map((entry) => this.actionButton(entry, true)));
     return v_flex()

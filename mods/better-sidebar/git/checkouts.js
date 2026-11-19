@@ -25,7 +25,7 @@ export async function readCheckout(cwd, on) {
   );
   if (status.code !== 0) {
     if (/not a git repository/i.test(status.stderr)) return null;
-    throw new Error("无法读取状态");
+    throw new Error("Cannot read status");
   }
 
   // The repo's own .git folder names it; a worktree's top differs from it.
@@ -34,7 +34,7 @@ export async function readCheckout(cwd, on) {
     cwd,
     on,
   });
-  if (top.code !== 0 || common.code !== 0) throw new Error("无法读取仓库元数据");
+  if (top.code !== 0 || common.code !== 0) throw new Error("Cannot read repository metadata");
 
   const repo = common.stdout.trim();
   const info = {

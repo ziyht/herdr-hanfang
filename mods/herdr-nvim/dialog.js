@@ -37,8 +37,8 @@ export class Dialog {
     this.close();
     const outside = pathsOf(request).filter((p) => !inside(p, d.place.cwd));
     if (outside.length && !request.outside) {
-      return openDialog({ kind: "confirm", place: d.place, title: "在 tab 文件夹之外",
-        detail: `${outside.join(", ")} 在 ${d.place.cwd} 之外。仍要执行吗？`,
+      return openDialog({ kind: "confirm", place: d.place, title: "Outside this tab's folder",
+        detail: `${outside.join(", ")} is outside ${d.place.cwd}. Do it anyway?`,
         action: { type: "request", request: { ...request, outside: true } } });
     }
     cx.spawn(async () => {
@@ -47,7 +47,7 @@ export class Dialog {
       // Outside the tab's folder as the file system resolves it (a symlink
       // in it to elsewhere, which the path alone doesn't show): ask first.
       if (result.outside) {
-        return openDialog({ kind: "confirm", place: d.place, title: "在 tab 文件夹之外",
+        return openDialog({ kind: "confirm", place: d.place, title: "Outside this tab's folder",
           detail: `${result.error}. Do it anyway?`,
           action: { type: "request", request: { ...request, outside: true } } });
       }
@@ -78,7 +78,7 @@ export class Dialog {
         .border_color(t.accent).bg(t.background).text_size(12.8).text_color(t.foreground)))
       .when(Boolean(d.hint), (el) => el.child(div().text_size(11.5).text_color(t.dim).child(d.hint)))
       .child(h_flex().pt(8).gap(8).justify_end()
-        .child(button("dlg-cancel", "取消", false, () => this.close()))
-        .child(button("dlg-ok", d.kind === "input" ? "保存" : "确认", true, (_e, cx) => this.submit(cx))));
+        .child(button("dlg-cancel", "Cancel", false, () => this.close()))
+        .child(button("dlg-ok", d.kind === "input" ? "Save" : "Confirm", true, (_e, cx) => this.submit(cx))));
   }
 }

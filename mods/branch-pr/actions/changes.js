@@ -49,7 +49,7 @@ export const changeMethods = {
         this.openPR(change.number, cx, change.repo);
       } catch (e) {
         if (key === this.spaceKey)
-          this.error = `${e.message}。如果可能已生效，重试前请先刷新。`;
+          this.error = `${e.message}. Refresh before retrying if it may have gone through.`;
       } finally {
         this.mutating = false;
         cx.notify();
@@ -69,7 +69,7 @@ export const changeMethods = {
       try {
         await this.api({ action: "reviewer", repo, number, reviewer });
         if (key !== this.spaceKey) return;
-        this.notice = `已请 ${reviewer} 再次审阅。`;
+        this.notice = `Asked ${reviewer} to review again.`;
         this.openPR(number, cx, repo);
       } catch (e) {
         if (key === this.spaceKey) this.error = e.message;
@@ -136,11 +136,11 @@ export const changeMethods = {
           this.composer = null;
           this.draftKey = null;
         }
-        this.notice = "已保存到 GitHub。";
+        this.notice = "Saved to GitHub.";
         this.openPR(number, cx, repo);
       } catch (e) {
         if (key === this.spaceKey)
-          this.error = `${e.message}。如果请求可能已成功，重试前请先刷新。`;
+          this.error = `${e.message}. Refresh before retrying if the request may have succeeded.`;
       } finally {
         this.mutating = false;
         cx.notify();

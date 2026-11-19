@@ -36,7 +36,7 @@ export class KeyHelp {
         if (["escape", "q"].includes(e.key) || e.key_char === "?") { close(); cx.stop_propagation(); }
       })
       .w_full().p(18).gap(6).bg(t.popover).text_size(12.5)
-      .child(h_flex().items_center().child(div().flex_1().text_size(15).font_semibold().text_color(t.foreground).child("文件面板按键"))
+      .child(h_flex().items_center().child(div().flex_1().text_size(15).font_semibold().text_color(t.foreground).child("Files keys"))
         .child(div().text_size(11).text_color(t.dim).child("? / Esc")))
       .child(h_flex().items_start().gap(28)
         .child(v_flex().flex_1().gap(6).children(shown.slice(0, 1).map(group)))

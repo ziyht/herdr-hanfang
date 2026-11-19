@@ -85,22 +85,22 @@ export const worktreeViewMethods = {
         .child(div().w(62).flex_none().text_size(TEXT.small).text_color(t.dim).child(label))
         .child(TextField({ id: `pr-worktree-${id}`, state, height: 28 }));
     if (!form.path)
-      box.child(field("branch", "分支", form.branch)).child(field("name", "Worktree", form.name));
+      box.child(field("branch", "Branch", form.branch)).child(field("name", "Worktree", form.name));
     box.child(
       div()
         .text_size(TEXT.caption)
         .text_color(form.error ? t.ansi1 : form.path ? t.done : t.dim)
         .whitespace_normal()
-        .child(form.error ?? (form.path ? `检出已就绪： ${form.path}` : location)),
+        .child(form.error ?? (form.path ? `Checkout ready at ${form.path}` : location)),
     );
     const actions = h_flex().gap(8).items_center().justify_end().flex_wrap();
     if (!form.opened)
       actions.child(
         this.chooser({
           id: "pr-worktree-launch",
-          prefix: "打开方式",
+          prefix: "Open with",
           label: current.name,
-          accessibilityLabel: "用于打开 worktree 的程序",
+          accessibilityLabel: "Open the worktree with",
           width: 200,
           choices: choices.map((c) => ({ id: c.key, label: c.name })),
           value: form.launch,
@@ -112,7 +112,7 @@ export const worktreeViewMethods = {
     actions.child(
       Button({
         id: "pr-worktree-cancel",
-        label: form.path ? "完成" : "取消",
+        label: form.path ? "Done" : "Cancel",
         disabled: form.busy,
         onClick: close,
       }),
@@ -121,7 +121,7 @@ export const worktreeViewMethods = {
       actions.child(
         Button({
           id: "pr-worktree-submit",
-          label: form.busy ? "创建中…" : "创建",
+          label: form.busy ? "Creating…" : "Create",
           primary: true,
           disabled: form.busy,
           onClick: (cx) => this.createWorktree(cx),

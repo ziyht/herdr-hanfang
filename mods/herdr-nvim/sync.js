@@ -228,7 +228,7 @@ export class Sync {
     // A click while another action runs waits its turn (a moment, usually).
     for (const until = Date.now() + WAIT_MS; this.busy && Date.now() < until; ) await cx.sleep(100);
     if (this.busy) {
-      notify({ title: "herdr-nvim", body: "上一个操作尚未完成；请再试一次 预览/源码。", level: "warning" });
+      notify({ title: "herdr-nvim", body: "Still busy with the last action; try Preview / Source again.", level: "warning" });
       return;
     }
     // The tab the swap is for (it may not be the one on screen).
@@ -264,7 +264,7 @@ export class Sync {
         if (state === "open" ? !cur.nvim : cur.nvim) await this.toggle(cur.at, state, cx);
         cur.nvim = state === "open";
       } catch (e) {
-        notify({ title: "herdr-nvim", body: `无法打开或关闭该 tab 的 nvim：${e?.message ?? e}`, level: "error" });
+        notify({ title: "herdr-nvim", body: `Could not open or close the tab's nvim: ${e?.message ?? e}`, level: "error" });
       } finally {
         this.busy = false;
         cx.notify();

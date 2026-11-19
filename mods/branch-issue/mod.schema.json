@@ -120,9 +120,9 @@
                     "all"
                   ],
                   "x-labels": {
-                    "mine": "我的议题",
-                    "cycle": "当前周期",
-                    "all": "全部议题"
+                    "mine": "My issues",
+                    "cycle": "Active cycle",
+                    "all": "All issues"
                   },
                   "default": "mine"
                 },
@@ -139,12 +139,12 @@
                     "all"
                   ],
                   "x-labels": {
-                    "active": "进行中",
-                    "backlog": "待办",
+                    "active": "Active",
+                    "backlog": "Backlog",
                     "started": "Started",
-                    "done": "已完成",
-                    "cancelled": "已取消",
-                    "all": "全部状态"
+                    "done": "Done",
+                    "cancelled": "Cancelled",
+                    "all": "All states"
                   },
                   "default": "active"
                 },
@@ -169,7 +169,7 @@
               "default": "~/.herdr/worktrees"
             },
             "open_with": {
-              "title": "打开方式",
+              "title": "Open with",
               "description": "What a new worktree opens: terminal, or an installed agent's key such as claude.",
               "type": "string",
               "default": "terminal"

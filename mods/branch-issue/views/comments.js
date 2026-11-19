@@ -31,18 +31,18 @@ export const commentMethods = {
               IconButton({
                 id: `issue-copy-${comment.id}`,
                 icon: "copy",
-                label: "复制链接",
+                label: "Copy link",
                 small: true,
                 onClick: (cx) => {
                   cx.write_to_clipboard(comment.url);
-                  this.notice = "评论链接已复制。";
+                  this.notice = "Comment link copied.";
                   cx.notify();
                 },
               }),
             ),
           ),
       )
-      .child(Markdown(`issue-comment-${comment.id}`, comment.body || "没有评论内容。"));
+      .child(Markdown(`issue-comment-${comment.id}`, comment.body || "No comment text."));
   },
 
   threadActions(root, thread) {
@@ -54,7 +54,7 @@ export const commentMethods = {
       .child(
         TextButton({
           id: `issue-reply-${root.id}`,
-          label: "回复",
+          label: "Reply",
           disabled: this.mutating,
           onClick: (cx) =>
             this.compose("reply", root.id, null, cx, { entry: root.id, url: last.url }),
@@ -64,7 +64,7 @@ export const commentMethods = {
       .child(
         this.agentButton({
           id: `issue-agent-send-${root.id}`,
-          label: "发送给 agent",
+          label: "Send to agent",
           send: (agent, cx) =>
             this.compose("agent", root.id, context, cx, {
               entry: root.id,
@@ -78,7 +78,7 @@ export const commentMethods = {
   commentsView(body, issue) {
     const t = theme();
     const threads = commentThreads(issue);
-    if (!threads.length) body.child(Message("还没有评论。"));
+    if (!threads.length) body.child(Message("No comments yet."));
     threads.forEach((thread, i) => {
       const [root] = thread;
       const block = v_flex()
@@ -109,14 +109,14 @@ export const commentMethods = {
       .py(10)
       .gap(8)
       .when(divided, (el) => el.border_t(1).border_color(t.border))
-      .child(TextBox({ id: "issue-comment-input", state: this.newComment, label: "新评论" }))
+      .child(TextBox({ id: "issue-comment-input", state: this.newComment, label: "New comment" }))
       .child(
         h_flex()
           .justify_end()
           .child(
             Button({
               id: "issue-add-comment",
-              label: posting ? "发送中…" : "评论",
+              label: posting ? "Sending…" : "Comment",
               primary: true,
               disabled: this.mutating || !this.newComment.value().trim(),
               onClick: (cx) => this.postComment(cx),
@@ -144,18 +144,18 @@ export const commentMethods = {
         div()
           .text_size(TEXT.small)
           .font_medium()
-          .child(agent ? `发送给 ${agentName(agent)}` : "该 agent 已不再运行。"),
+          .child(agent ? `Send to ${agentName(agent)}` : "That agent is no longer running."),
       );
     if (agent?.status === "working" && !agent.spawn)
       box.child(
         div()
           .text_size(TEXT.caption)
           .text_color(t.dim)
-          .child("它正忙；你的消息已在它的会话中排队。"),
+          .child("It's busy; your message waits in its session."),
       );
     const disabled = this.mutating || !this.editor.value().trim() || (toAgent && !agent);
     return box
-      .child(TextBox({ id: "issue-inline-input", state: this.editor, label: "消息" }))
+      .child(TextBox({ id: "issue-inline-input", state: this.editor, label: "Message" }))
       .child(
         h_flex()
           .gap(8)
@@ -163,7 +163,7 @@ export const commentMethods = {
           .child(
             Button({
               id: "issue-cancel",
-              label: "关闭",
+              label: "Close",
               disabled: this.mutating,
               onClick: (cx) => this.closeComposer(cx),
             }),
@@ -171,7 +171,7 @@ export const commentMethods = {
           .child(
             Button({
               id: "issue-submit",
-              label: this.mutating ? "发送中…" : toAgent ? "发送" : "回复",
+              label: this.mutating ? "Sending…" : toAgent ? "Send" : "Reply",
               primary: true,
               disabled,
               onClick: (cx) => (toAgent ? this.sendAgent(cx) : this.mutate(cx)),

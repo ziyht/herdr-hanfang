@@ -129,7 +129,7 @@ export class Lists {
         h_flex()
           .flex_1()
           .gap(2)
-          .child(tab("spaces", "空间", null))
+          .child(tab("spaces", "Spaces", null))
           .child(tab("agents", "Agents", view.count)),
       )
       .child(this.tab === "spaces" ? this.spaces.newSpaceButton() : this.agents.sortMenu());

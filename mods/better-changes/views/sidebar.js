@@ -29,12 +29,12 @@ import {
 } from "./ui.js";
 
 const VIEWS = [
-  { id: "flat", label: "平铺", icon: "flat" },
-  { id: "tree", label: "树形", icon: "tree" },
+  { id: "flat", label: "Flat", icon: "flat" },
+  { id: "tree", label: "Tree", icon: "tree" },
 ];
 const LAYOUTS = [
-  { id: "inline", label: "内联", icon: "diff-inline" },
-  { id: "split", label: "并排", icon: "diff-split" },
+  { id: "inline", label: "Inline", icon: "diff-inline" },
+  { id: "split", label: "Side by side", icon: "diff-split" },
 ];
 
 export const sidebarMethods = {
@@ -97,7 +97,7 @@ export const sidebarMethods = {
           .child(
             HeaderTab({
               id: "tab-changes",
-              label: "变更",
+              label: "Changes",
               count: this.total || null,
               active: this.tab === "changes",
               onClick: (cx) => this.setTab("changes", cx),
@@ -106,7 +106,7 @@ export const sidebarMethods = {
           .child(
             HeaderTab({
               id: "tab-commit",
-              label: "提交",
+              label: "Commits",
               count: unpushed,
               active: this.tab === "commit",
               onClick: (cx) => this.setTab("commit", cx),
@@ -117,7 +117,7 @@ export const sidebarMethods = {
         IconButton({
           id: "refresh",
           icon: "refresh",
-          label: "刷新",
+          label: "Refresh",
           spinning: this.refreshSpinning,
           onClick: (cx) => this.refreshAll(cx),
         }),
@@ -165,14 +165,14 @@ export const sidebarMethods = {
         this.menuOpen = open;
         cx.notify();
       },
-      trigger: IconButton({ id: "more-trigger", icon: "more", label: "选项" }),
+      trigger: IconButton({ id: "more-trigger", icon: "more", label: "Options" }),
       children: [
-        MenuLabel("变更"),
+        MenuLabel("Changes"),
         ...VIEWS.map((v) =>
           option("view", v, this.view === v.id, (id, cx) => this.setView(id, cx)),
         ),
         MenuDivider(),
-        MenuLabel("差异"),
+        MenuLabel("Diff"),
         ...LAYOUTS.map((l) =>
           option("layout", l, this.diffLayout === l.id, (id, cx) => this.setDiffLayout(id, cx)),
         ),
@@ -188,23 +188,23 @@ export const sidebarMethods = {
     const staged = this.files.filter((f) => f.staged);
     const committed = this.committed?.total ? this.committed : null;
     if (!conflicts.length && !unstaged.length && !staged.length && !committed)
-      list.child(Message(this.loading || !this.root ? "正在加载变更…" : "没有变更"));
+      list.child(Message(this.loading || !this.root ? "Loading changes…" : "No changes"));
     this.groupsDrawn = 0;
-    this.addGroup(list, "conflict", "冲突", conflicts);
-    this.addGroup(list, "staged", "已暂存", staged);
-    this.addGroup(list, "unstaged", "未暂存", unstaged);
+    this.addGroup(list, "conflict", "Conflicts", conflicts);
+    this.addGroup(list, "staged", "Staged", staged);
+    this.addGroup(list, "unstaged", "Unstaged", unstaged);
     if (committed)
       this.addGroup(
         list,
         "committed",
-        "已提交",
+        "Committed",
         committed.files,
-        `不在 ${committed.name} 上`,
+        `not on ${committed.name}`,
         committed.total,
       );
     const limit = this.settings.limits.files;
     if (this.total > limit)
-      list.child(Message(`仅显示前 ${limit.toLocaleString()} 个变更文件。`));
+      list.child(Message(`Showing the first ${limit.toLocaleString()} changed files.`));
     return v_flex().id("changes").flex_1().min_h(0).child(list).child(this.renderCommitBox());
   },
 
@@ -232,7 +232,7 @@ export const sidebarMethods = {
           id: "commit-message",
           state: this.input,
           focused: this.typing,
-          label: "提交信息",
+          label: "Commit message",
         }),
       )
       .child(this.renderCommitButton())
@@ -248,18 +248,18 @@ export const sidebarMethods = {
   },
 
   commitBoxHint() {
-    if (this.amendLoading) return "正在加载最近一次提交…";
-    if (this.conflicts) return "提交前请先解决冲突并暂存文件。";
+    if (this.amendLoading) return "Loading the latest commit…";
+    if (this.conflicts) return "Resolve conflicts and stage the files before committing.";
     if (this.commitMode === "amend") {
-      return "修正会重写最近一次提交。未暂存的变更不受影响。";
+      return "Amend rewrites the latest commit. Unstaged changes stay untouched.";
     }
     return null;
   },
 
   commitButtonLabel() {
-    if (this.operation === "commit") return "提交中…";
-    if (this.operation === "amend") return "修正中…";
-    return this.commitMode === "amend" ? "修正" : "提交";
+    if (this.operation === "commit") return "Committing…";
+    if (this.operation === "amend") return "Amending…";
+    return this.commitMode === "amend" ? "Amend" : "Commit";
   },
 
   renderCommitButton() {
@@ -282,7 +282,7 @@ export const sidebarMethods = {
       MenuOption({
         id: "mode-commit",
         icon: "commit",
-        label: "提交",
+        label: "Commit",
         selected: !amend,
         onClick: choose("commit"),
       }),
@@ -292,7 +292,7 @@ export const sidebarMethods = {
         MenuOption({
           id: "mode-amend",
           icon: "amend",
-          label: "修正",
+          label: "Amend",
           selected: amend,
           onClick: choose("amend"),
         }),
@@ -307,7 +307,7 @@ export const sidebarMethods = {
         this.commitMenuOpen = open;
         cx.notify();
       },
-      trigger: SplitTrigger({ id: "commit-options", label: "提交选项" }),
+      trigger: SplitTrigger({ id: "commit-options", label: "Commit options" }),
       children: options,
     });
   },
@@ -316,8 +316,8 @@ export const sidebarMethods = {
     if (!files.length) return;
     const collapsed = this.collapsed.has(scope);
     const bulk = {
-      unstaged: { action: "stage", icon: "plus", label: "全部暂存" },
-      staged: { action: "unstage", icon: "minus", label: "全部取消暂存" },
+      unstaged: { action: "stage", icon: "plus", label: "Stage all" },
+      staged: { action: "unstage", icon: "minus", label: "Unstage all" },
     }[scope];
     list.child(
       GroupHeader({
@@ -431,7 +431,7 @@ export const sidebarMethods = {
         IconButton({
           id: `stage-${file.path}`,
           icon: "plus",
-          label: "暂存",
+          label: "Stage",
           small: true,
           onClick: (cx) => this.indexAction("stage", file.path, cx),
         }),
@@ -441,7 +441,7 @@ export const sidebarMethods = {
         IconButton({
           id: `unstage-${file.path}`,
           icon: "minus",
-          label: "取消暂存",
+          label: "Unstage",
           small: true,
           onClick: (cx) => this.indexAction("unstage", file.path, cx),
         }),
@@ -454,7 +454,7 @@ export const sidebarMethods = {
     if (this.commitsError) return list.child(Message(this.commitsError, true));
     if (!this.commits.length)
       return list.child(
-        Message(this.commitsLoading || !this.root ? "正在加载历史…" : "还没有提交"),
+        Message(this.commitsLoading || !this.root ? "Loading history…" : "No commits yet"),
       );
     this.groupsDrawn = 0;
     const remote = this.committed;
@@ -470,7 +470,7 @@ export const sidebarMethods = {
       });
       return list;
     }
-    const notPulled = (n) => (n ? `${n} 个未拉取` : null);
+    const notPulled = (n) => (n ? `${n} not pulled` : null);
     const detail = (...parts) => parts.filter(Boolean).join(" · ");
     const head = this.remoteHead;
     const pushed = this.commits.filter((c) => !remote.unpushed.has(c.hash));
@@ -535,7 +535,7 @@ export const sidebarMethods = {
           .justify_center()
           .text_size(TEXT.small)
           .text_color(t.muted)
-          .child(this.commitsLoading ? "加载中…" : "加载更多"),
+          .child(this.commitsLoading ? "Loading…" : "Load more"),
       );
   },
 
@@ -610,7 +610,7 @@ export const sidebarMethods = {
         IconButton({
           id: "commit-back",
           icon: "chevron-left",
-          label: "返回提交列表",
+          label: "Back to commits",
           onClick: (cx) => {
             this.selectedCommit = null;
             this.commitToken++;
@@ -633,7 +633,7 @@ export const sidebarMethods = {
         IconButton({
           id: "commit-open",
           icon: "external-link",
-          label: "在 GitHub 上打开",
+          label: "Open on GitHub",
           onClick: (cx) => cx.open_url(url),
         }),
       );
@@ -677,10 +677,10 @@ export const sidebarMethods = {
   renderCommitChanges() {
     const changes = v_flex().id("commit-changes").flex_none().p(6);
     if (this.commitFilesError) return changes.child(Message(this.commitFilesError, true));
-    if (this.commitFilesLoading) return changes.child(Message("正在加载变更…"));
+    if (this.commitFilesLoading) return changes.child(Message("Loading changes…"));
     if (this.commitFiles.length) {
       changes.child(
-        GroupHeader({ id: "group-commit", label: "变更", count: this.commitFiles.length }),
+        GroupHeader({ id: "group-commit", label: "Changes", count: this.commitFiles.length }),
       );
     }
     this.addRows(changes, "commit", this.commitFiles);

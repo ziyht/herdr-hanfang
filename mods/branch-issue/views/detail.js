@@ -21,11 +21,11 @@ import {
 } from "./ui.js";
 
 const PRIORITIES = [
-  { id: 0, label: "无优先级" },
-  { id: 1, label: "紧急" },
-  { id: 2, label: "高" },
-  { id: 3, label: "中" },
-  { id: 4, label: "低" },
+  { id: 0, label: "No priority" },
+  { id: 1, label: "Urgent" },
+  { id: 2, label: "High" },
+  { id: 3, label: "Medium" },
+  { id: 4, label: "Low" },
 ];
 const AGENT_COLORS = { working: "working", blocked: "blocked", done: "done" };
 
@@ -55,7 +55,7 @@ export const detailMethods = {
     return IconButton({
       id: "issue-back",
       icon: "chevron-left",
-      label: "返回议题列表",
+      label: "Back to issues",
       disabled: this.mutating,
       onClick: (cx) => this.backToList(cx),
     });
@@ -86,15 +86,15 @@ export const detailMethods = {
       .border_b(1)
       .border_color(t.border)
       .role("tab_list")
-      .child(tab("overview", "概览"))
-      .child(tab("comments", "评论", (issue.comments ?? []).length));
+      .child(tab("overview", "Overview"))
+      .child(tab("comments", "Comments", (issue.comments ?? []).length));
   },
 
   // Starting work, handing it on and undoing a link: what's done to the issue itself.
   actionsMenu(issue) {
     const agents = this.agentChoices();
     const choices = [
-      { id: "start", label: "创建 worktree" },
+      { id: "start", label: "Create worktree" },
       ...agents.flatMap((a, i) => [
         { id: `agent:${a.address}`, label: `Send to ${agentName(a)}`, divided: i === 0 },
         ...(this.spawnRun(a)
@@ -107,14 +107,14 @@ export const detailMethods = {
         divided: i === 0,
       })),
       ...(this.linkedIdentifiers.has(issue.identifier)
-        ? [{ id: "unlink", label: "解除与此分支的关联", divided: true }]
+        ? [{ id: "unlink", label: "Unlink from this branch", divided: true }]
         : []),
     ];
     return this.chooser({
       id: "issue-actions",
-      accessibilityLabel: "此议题的操作",
+      accessibilityLabel: "Actions for this issue",
       width: 220,
-      trigger: MenuButton({ id: "issue-actions-trigger", label: "操作" }),
+      trigger: MenuButton({ id: "issue-actions-trigger", label: "Actions" }),
       choices,
       onChoose: (id, cx) => {
         if (id === "start") this.startWork(cx);
@@ -162,7 +162,7 @@ export const detailMethods = {
             IconButton({
               id: "issue-open-linear",
               icon: "external",
-              label: "在 Linear 中打开",
+              label: "Open in Linear",
               onClick: (cx) => cx.open_url(issue.url),
             }).mr(-6),
           ),
@@ -221,8 +221,8 @@ export const detailMethods = {
       label: s.name,
     }));
     const members = [
-      ...(this.me ? [{ id: this.me.id, label: "我" }] : []),
-      { id: "none", label: "未分配" },
+      ...(this.me ? [{ id: this.me.id, label: "Me" }] : []),
+      { id: "none", label: "Unassigned" },
       ...(issue.team?.members ?? [])
         .filter((m) => m.active !== false && m.id !== this.me?.id)
         .map((m) => ({ id: m.id, label: person(m) })),
@@ -239,13 +239,13 @@ export const detailMethods = {
         pick({
           id: "issue-state-pick",
           icon: "state",
-          label: issue.state?.name ?? "无",
-          accessibilityLabel: "状态",
+          label: issue.state?.name ?? "None",
+          accessibilityLabel: "State",
           anchor: "top_left",
           choices: states,
           value: issue.state?.id,
           triggerFocus: this.statePick,
-          onChoose: (stateId, cx) => this.update({ stateId }, "状态", cx),
+          onChoose: (stateId, cx) => this.update({ stateId }, "State", cx),
         }),
       )
       .child(dot())
@@ -253,14 +253,14 @@ export const detailMethods = {
         pick({
           id: "issue-priority-pick",
           icon: "priority",
-          label: issue.priorityLabel || "无优先级",
-          accessibilityLabel: "优先级",
+          label: issue.priorityLabel || "No priority",
+          accessibilityLabel: "Priority",
           anchor: "top_left",
           color: priorityColor,
           choices: PRIORITIES,
           value: issue.priority,
           triggerFocus: this.priorityPick,
-          onChoose: (priority, cx) => this.update({ priority }, "优先级", cx),
+          onChoose: (priority, cx) => this.update({ priority }, "Priority", cx),
         }),
       )
       .child(div().flex_1())
@@ -268,13 +268,13 @@ export const detailMethods = {
         pick({
           id: "issue-assignee-pick",
           icon: "user",
-          label: person(issue.assignee) || "未分配",
-          accessibilityLabel: "经办人",
+          label: person(issue.assignee) || "Unassigned",
+          accessibilityLabel: "Assignee",
           choices: members,
           value: issue.assignee?.id ?? "none",
           triggerFocus: this.assigneePick,
           onChoose: (id, cx) =>
-            this.update(id === "none" ? { unassign: true } : { assignee: id }, "经办人", cx),
+            this.update(id === "none" ? { unassign: true } : { assignee: id }, "Assignee", cx),
         }),
       );
   },
@@ -304,7 +304,7 @@ export const detailMethods = {
     this.linkRows(body, issue);
     this.childRows(body, issue);
     if (issue.parent)
-      this.group(body, { key: "parent", label: "父任务" }, (into) =>
+      this.group(body, { key: "parent", label: "Parent" }, (into) =>
         into.child(
           Row({ id: "issue-parent", onClick: (cx) => this.openRelated(issue.parent, cx) })
             .child(div().flex_1().min_w(0).truncate().child(issue.parent.title))
@@ -318,7 +318,7 @@ export const detailMethods = {
             ),
         ),
       );
-    this.group(body, { key: "description", label: "描述" }, (into) =>
+    this.group(body, { key: "description", label: "Description" }, (into) =>
       into.child(
         div()
           .px(8)
@@ -345,7 +345,7 @@ export const detailMethods = {
       for (const agent of list)
         into.child(
           Row({ id: `issue-agent-${agent.address}`, onClick: () => this.focusAgent(agent) })
-            .tooltip("转到该 agent")
+            .tooltip("Go to this agent")
             .child(
               div()
                 .size(8)
@@ -371,17 +371,17 @@ export const detailMethods = {
         .child(div().min_w(0).truncate().text_size(TEXT.small).text_color(t.muted).child(value));
     const labels = (issue.labels ?? []).map((l) => l.name).join(", ");
     const rows = [
-      row("labels", "标签", labels),
-      row("project", "项目", issue.project?.name),
+      row("labels", "Labels", labels),
+      row("project", "Project", issue.project?.name),
       row(
         "cycle",
-        "周期",
+        "Cycle",
         issue.cycle?.name || (issue.cycle?.number && `Cycle ${issue.cycle.number}`),
       ),
-      row("estimate", "预估", issue.estimate ? String(issue.estimate) : ""),
+      row("estimate", "Estimate", issue.estimate ? String(issue.estimate) : ""),
     ].filter(Boolean);
     if (!rows.length) return;
-    this.group(body, { key: "properties", label: "属性" }, (into) => into.children(rows));
+    this.group(body, { key: "properties", label: "Properties" }, (into) => into.children(rows));
   },
 
   linkRows(body, issue) {
@@ -389,7 +389,7 @@ export const detailMethods = {
     const links = issue.attachments ?? [];
     if (!links.length) return;
     const prs = new Map(linkedPRs(issue).map((pr) => [pr.id, pr]));
-    this.group(body, { key: "links", label: "关联", count: links.length }, (into) => {
+    this.group(body, { key: "links", label: "Links", count: links.length }, (into) => {
       for (const link of links) {
         const pr = prs.get(link.id);
         const COLORS = { danger: t.ansi1, waiting: t.ansi3, good: t.ansi2, none: t.dim };
@@ -422,7 +422,7 @@ export const detailMethods = {
     const t = theme();
     const children = issue.children ?? [];
     if (!children.length) return;
-    this.group(body, { key: "children", label: "子任务", count: children.length }, (into) => {
+    this.group(body, { key: "children", label: "Sub-issues", count: children.length }, (into) => {
       for (const child of children)
         into.child(
           Row({ id: `issue-child-${child.id}`, onClick: (cx) => this.openRelated(child, cx) })

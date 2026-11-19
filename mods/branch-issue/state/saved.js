@@ -120,7 +120,7 @@ export const savedMethods = {
     return seconds < 60
       ? "Updated just now"
       : seconds < 3600
-        ? `Updated ${Math.floor(seconds / 60)} 分钟前`
+        ? `Updated ${Math.floor(seconds / 60)}m ago`
         : `Updated ${new Date(this.lastUpdated).toLocaleTimeString()}`;
   },
 };

@@ -8,7 +8,7 @@ import { TEXT, SIZE, codeFont, codeSize, FileIcon, Panel, PaneBar, DiffStat, Mes
 import { fileIcon, isLight } from "../file-icons.js";
 
 const TAB_OPEN_TIMEOUT_MS = 1500;
-const NO_PATCH = "无文本差异：GitHub 不含二进制和超大文件。";
+const NO_PATCH = "No text diff: GitHub leaves out binary and very large files.";
 // In widths of the code font's size, so a diff looks the same at any terminal size.
 const CHAR_WIDTH = 0.62;
 const GUTTERS = 10;
@@ -152,7 +152,7 @@ export const diffMethods = {
   FullFileButton() {
     return TextButton({
       id: "diff-full-file",
-      label: "完整文件",
+      label: "Full file",
       active: this.fullFile(),
       onClick: (cx) => {
         this.toggleFullFile();
@@ -172,7 +172,7 @@ export const diffMethods = {
   // there are none, as when one side deleted the file.
   async readConflict(path, root, on) {
     const stages = await this.git(["ls-files", "-u", "-z", "--", path], root, on);
-    if (stages.code !== 0) throw Error(stages.stderr || "无法读取冲突");
+    if (stages.code !== 0) throw Error(stages.stderr || "Cannot read the conflict");
     const present = new Set(
       stages.stdout
         .split("\0")
@@ -180,17 +180,17 @@ export const diffMethods = {
         .map((entry) => entry.split(/\s+/)[2]),
     );
     if (!present.has("2"))
-      return { message: "冲突：你这边已删除，对方这边有修改。" };
+      return { message: "Conflict: deleted on your side, changed on the incoming side." };
     if (!present.has("3"))
-      return { message: "冲突：你这边有修改，对方这边已删除。" };
+      return { message: "Conflict: changed on your side, deleted on the incoming side." };
     const text = await readTextFile(`${root}/${path}`, { on });
     if (text === null)
-      return { message: "冲突：无法读取此文件（可能为二进制或过大）。" };
-    if (text.includes("\0")) return { message: "冲突：二进制文件，无文本差异。" };
+      return { message: "Conflict: cannot read this file. It may be binary or too large." };
+    if (text.includes("\0")) return { message: "Conflict: binary file, no text diff." };
     const rows = conflictRows(text);
     return rows
       ? { rows }
-      : { message: "已没有冲突标记。暂存该文件即视为已解决。" };
+      : { message: "No conflict markers left. Stage the file to mark it resolved." };
   },
 
   showRows(rows, paired) {
@@ -209,7 +209,7 @@ export const diffMethods = {
     this.note = null;
     if (!file || (scope === "staged" && !file.staged) || (scope === "unstaged" && !file.unstaged)) {
       this.rows = [];
-      this.note = "此文件在此处已无变更。";
+      this.note = "This file has no changes left here.";
       this.diffLoading = false;
       cx.notify();
       return;
@@ -257,9 +257,9 @@ export const diffMethods = {
   async readFreshFile(path, root, on) {
     const text = await readTextFile(`${root}/${path}`, { on });
     if (text === null)
-      return { lines: ["无法预览此文件（二进制、过大或不可读）。"] };
-    if (text.includes("\0")) return { lines: ["二进制文件 · 无文本差异"] };
-    if (!text) return { lines: ["空的新文件"] };
+      return { lines: ["Cannot preview this file: binary, too large, or unreadable."] };
+    if (text.includes("\0")) return { lines: ["Binary file · no text diff"] };
+    if (!text) return { lines: ["Empty new file"] };
     const all = text.replace(/\n$/, "").split("\n");
     return {
       freshLines: all.length,
@@ -273,11 +273,11 @@ export const diffMethods = {
     if (this.shownFull) args.push("--unified=1000000");
     args.push("--no-ext-diff", "--no-textconv", "--no-color", "--", path);
     const result = await this.git(args, root, on);
-    if (result.code !== 0) throw Error(result.stderr || "无法读取差异");
+    if (result.code !== 0) throw Error(result.stderr || "Cannot read diff");
     const all = result.stdout.replace(/\n$/, "").split("\n");
     const first = all.findIndex((line) => line.startsWith("@@"));
     if (first >= 0) return all.slice(first);
-    return [file.binary ? "二进制文件已更改" : "无文本差异（模式或子模块变更）"];
+    return [file.binary ? "Binary file changed" : "No text diff (mode or submodule change)"];
   },
 
   showLines(lines) {
@@ -293,18 +293,18 @@ export const diffMethods = {
 
   conflictLabel() {
     const count = this.conflictCount;
-    return count ? `${count} 个冲突` : "冲突";
+    return count ? `${count} ${count === 1 ? "conflict" : "conflicts"}` : "Conflict";
   },
 
   // What this diff is, for the row above it.
   head() {
     const file = this.diffFile();
     const parts = (this.path ?? "").split("/");
-    const title = parts.pop() || "无文件";
+    const title = parts.pop() || "No file";
     const scopes = {
-      staged: "已暂存",
-      unstaged: "未暂存",
-      committed: "已提交",
+      staged: "Staged",
+      unstaged: "Unstaged",
+      committed: "Committed",
       commit: this.commitRef?.short,
       patch: this.commitRef?.short,
     };
@@ -346,7 +346,7 @@ export const diffMethods = {
     root.child(this.renderDiffRows(split));
     if (this.truncated) {
       const limit = this.settings.limits.diff_lines.toLocaleString();
-      root.child(Message(`仅显示前 ${limit} 行。`));
+      root.child(Message(`Showing the first ${limit} lines.`));
     }
     return root;
   },
@@ -378,7 +378,7 @@ export const diffMethods = {
         div()
           .flex_1()
           .px(12)
-          .child(conflict ? "你的" : "修改前"),
+          .child(conflict ? "Yours" : "Before"),
       )
       .child(
         div()
@@ -389,7 +389,7 @@ export const diffMethods = {
           .px(12)
           .border_l(1)
           .border_color(t.border)
-          .child(conflict ? "对方的" : "修改后"),
+          .child(conflict ? "Incoming" : "After"),
       );
   },
 

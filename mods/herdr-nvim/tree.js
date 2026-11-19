@@ -17,7 +17,7 @@ const LIST = 'dir=$1; shift; n=0; for p in "$dir"/* "$dir"/.[!.]* "$dir"/..?*; d
 // {entries: folders first, then by name; ignored: the names git ignores}.
 export async function listFolder(path) {
   const r = await exec("sh", ["-c", LIST, "herdr-nvim", path]);
-  if (r.code !== 0) throw new Error(r.stderr.trim() || `无法列出 ${path}`);
+  if (r.code !== 0) throw new Error(r.stderr.trim() || `Cannot list ${path}`);
   const fields = r.stdout.split("\0"), entries = [];
   let i = 0;
   for (; i + 1 < fields.length && fields[i] !== "x"; i += 2) entries.push({ name: fields[i + 1], dir: fields[i] === "d" });

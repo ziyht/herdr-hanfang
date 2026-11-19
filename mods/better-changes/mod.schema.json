@@ -135,13 +135,13 @@
                 "flat"
               ],
               "x-labels": {
-                "tree": "树形",
-                "flat": "平铺"
+                "tree": "Tree",
+                "flat": "Flat"
               },
               "default": "tree"
             },
             "diff": {
-              "title": "差异",
+              "title": "Diff",
               "description": "How diffs start, until you choose in the ⋮ menu.",
               "type": "string",
               "enum": [
@@ -149,8 +149,8 @@
                 "split"
               ],
               "x-labels": {
-                "inline": "内联",
-                "split": "并排"
+                "inline": "Inline",
+                "split": "Side by side"
               },
               "default": "inline"
             }

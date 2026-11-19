@@ -123,7 +123,7 @@ export const agentMethods = {
       argv: agent.run,
       task: message,
     });
-    this.notice = `已在新 tab 中启动 ${agentName(agent)}。`;
+    this.notice = `Started ${agentName(agent)} in a new tab.`;
   },
 
   // A dropdown of who can take this: agents on the issue first, then the rest of this space,
@@ -151,7 +151,7 @@ export const agentMethods = {
         ]),
         ...fresh.map((a, i) => ({
           id: a.address,
-          label: `启动 ${agentName(a)}`,
+          label: `Start ${agentName(a)}`,
           divided: i === 0 && running.length > 0,
         })),
       ],
@@ -188,11 +188,11 @@ export const agentMethods = {
     cx.spawn(async (cx) => {
       try {
         const result = await hc(this.hcArgs(agent, message));
-        if (result.code !== 0) throw new Error(result.stderr || "发送给 agent 失败");
+        if (result.code !== 0) throw new Error(result.stderr || "Agent delivery failed");
         if (key === this.spaceKey && this.composer === composer) {
           this.notice = agent.spawn
-            ? `已在 ${agent.parentName} 下启动子 agent。`
-            : `已发送给 ${agentName(agent)}。`;
+            ? `Started a sub-agent under ${agent.parentName}.`
+            : `Sent to ${agentName(agent)}.`;
           localStorage.removeItem(draft);
           this.composer = null;
           this.draftKey = null;

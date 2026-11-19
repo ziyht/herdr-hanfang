@@ -33,15 +33,15 @@ export function ghProblem(message) {
   if (/GitHub CLI \(gh\) is not installed/.test(message ?? ""))
     return {
       kind: "missing",
-      title: "未安装 GitHub CLI",
-      detail: "此面板通过 gh 读写。请先安装并登录，然后重试。",
+      title: "GitHub CLI isn't installed",
+      detail: "This panel reads and writes through gh. Install it, log in, then try again.",
       command: "gh auth login",
     };
   if (/GitHub CLI is not logged in/.test(message ?? ""))
     return {
       kind: "logged-out",
-      title: "GitHub CLI 未登录",
-      detail: "此面板使用你的 gh 登录态。请在终端运行此命令，然后重试。",
+      title: "GitHub CLI isn't logged in",
+      detail: "This panel uses your gh login. Run this in a terminal, then try again.",
       command: "gh auth login",
     };
   return null;
@@ -70,10 +70,10 @@ export function cleanLog(text) {
 
 export function timeAgo(iso, now = Date.now()) {
   const minutes = Math.floor((now - new Date(iso).getTime()) / 60000);
-  if (!(minutes >= 1)) return "刚刚";
-  if (minutes < 60) return `${minutes} 分钟前`;
-  if (minutes < 1440) return `${Math.floor(minutes / 60)} 小时前`;
-  return `${Math.floor(minutes / 1440)} 天前`;
+  if (!(minutes >= 1)) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1440) return `${Math.floor(minutes / 60)}h ago`;
+  return `${Math.floor(minutes / 1440)}d ago`;
 }
 
 export function elapsed(start, end) {
@@ -86,15 +86,15 @@ export function elapsed(start, end) {
 // ── States ──────────────────────────────────────────────────────────────────
 
 export function prStatus(pr) {
-  if (pr.state === "MERGED") return { label: "已合并", icon: "merged", color: "ansi5" };
-  if (pr.state === "CLOSED") return { label: "已关闭", icon: "closed", color: "ansi1" };
-  if (pr.isDraft) return { label: "草稿", icon: "draft", color: "dim" };
-  return { label: "开放中", icon: "pull-request", color: "ansi2" };
+  if (pr.state === "MERGED") return { label: "Merged", icon: "merged", color: "ansi5" };
+  if (pr.state === "CLOSED") return { label: "Closed", icon: "closed", color: "ansi1" };
+  if (pr.isDraft) return { label: "Draft", icon: "draft", color: "dim" };
+  return { label: "Open", icon: "pull-request", color: "ansi2" };
 }
 
 export const REVIEW_STATES = {
-  APPROVED: { label: "已批准", icon: "check-success", color: "ansi2" },
-  CHANGES_REQUESTED: { label: "要求修改", icon: "check-failure", color: "ansi1" },
+  APPROVED: { label: "Approved", icon: "check-success", color: "ansi2" },
+  CHANGES_REQUESTED: { label: "Changes requested", icon: "check-failure", color: "ansi1" },
   COMMENTED: { label: "Commented", icon: "comment", color: "dim" },
   DISMISSED: { label: "Dismissed", icon: "check-skipped", color: "dim" },
   REQUESTED: { label: "Review requested", icon: "check-pending", color: "ansi3" },
@@ -180,14 +180,14 @@ export function mergeBlockers(pr) {
   if (pr.isDraft) add("Draft", "draft", "waiting");
   if (pr.mergeable === "CONFLICTING") add("Conflicts", "check-failure", "danger");
   if (counts.failure)
-    add(`${pad(counts.failure, "项检查", "项检查")} 失败`, "check-failure", "danger", "checks");
+    add(`${pad(counts.failure, "check")} failed`, "check-failure", "danger", "checks");
   if (pr.reviewDecision === "CHANGES_REQUESTED")
     add("Changes requested", "check-failure", "danger", "overview");
   const unresolved = unresolvedThreads(pr).length;
   if (unresolved)
     add(`${unresolved} unresolved`, "comment", "danger", "conversation", { unresolved: true });
   const running = counts.running + counts.pending;
-  if (running) add(`${pad(running, "项检查", "项检查")} 进行中`, "check-running", "waiting", "checks");
+  if (running) add(`${pad(running, "check")} running`, "check-running", "waiting", "checks");
   if (pr.reviewDecision === "REVIEW_REQUIRED")
     add("Review required", "check-pending", "waiting", "overview");
   if (pr.mergeStateStatus === "BEHIND") add(`Behind ${pr.baseRefName}`, "check-pending", "waiting");
@@ -212,7 +212,7 @@ export function prStats(pr) {
     {
       key: "checks",
       value: counted ? `${counts.success}/${counted}` : "–",
-      label: "检查",
+      label: "Checks",
       tone: !counted
         ? "none"
         : counts.failure
@@ -226,7 +226,7 @@ export function prStats(pr) {
     {
       key: "reviews",
       value: reviewers.length ? `${approved}/${reviewers.length}` : "–",
-      label: "审阅",
+      label: "Reviews",
       tone:
         {
           CHANGES_REQUESTED: "danger",
@@ -238,15 +238,15 @@ export function prStats(pr) {
           CHANGES_REQUESTED: "Changes requested",
           REVIEW_REQUIRED: "Review required",
           APPROVED: "Approved",
-        }[pr.reviewDecision] ?? "无需审阅",
+        }[pr.reviewDecision] ?? "No review needed",
       section: "overview",
     },
     {
       key: "unresolved",
       value: String(unresolved),
-      label: "未解决",
+      label: "Unresolved",
       tone: unresolved ? "danger" : "none",
-      detail: unresolved ? `${pad(unresolved, "条未解决话题", "条未解决话题")}` : "没有未解决的话题",
+      detail: unresolved ? `${pad(unresolved, "unresolved thread")}` : "No unresolved threads",
       section: "conversation",
       unresolved: Boolean(unresolved),
     },
@@ -256,46 +256,46 @@ export function prStats(pr) {
 
 // Only what the other stats don't already say: plain "blocked" adds nothing.
 function mergeStat(pr) {
-  const stat = (value, tone, detail) => [{ key: "merge", label: "合并", value, tone, detail }];
-  if (pr.autoMergeRequest) return stat("自动", "waiting", "就绪后自动合并中");
-  if (pr.isDraft) return stat("草稿", "waiting", "仍是草稿");
+  const stat = (value, tone, detail) => [{ key: "merge", label: "Merge", value, tone, detail }];
+  if (pr.autoMergeRequest) return stat("Auto", "waiting", "Merging when ready");
+  if (pr.isDraft) return stat("Draft", "waiting", "Still a draft");
   if (pr.mergeable === "CONFLICTING")
-    return stat("冲突", "danger", `与 ${pr.baseRefName} 冲突`);
+    return stat("Conflicts", "danger", `Conflicts with ${pr.baseRefName}`);
   if (pr.mergeStateStatus === "BEHIND")
-    return stat("落后", "waiting", `落后于 ${pr.baseRefName}`);
-  return mergeBlockers(pr).length ? [] : stat("就绪", "good", "可以合并");
+    return stat("Behind", "waiting", `Behind ${pr.baseRefName}`);
+  return mergeBlockers(pr).length ? [] : stat("Ready", "good", "Ready to merge");
 }
 
 const merged = (word) => (pr) =>
-  `${word} #${pr.number}（${pr.headRefName} → ${pr.baseRefName}）？此操作不可撤销。`;
+  `${word} #${pr.number} from ${pr.headRefName} into ${pr.baseRefName}? This cannot be undone.`;
 export const STATE_CHANGES = {
-  merge: { label: "合并", question: merged("合并"), done: "已合并。" },
+  merge: { label: "Merge", question: merged("Merge"), done: "Merged." },
   squash: {
-    label: "压缩合并",
-    question: merged("压缩合并"),
-    done: "已压缩合并。",
+    label: "Squash and merge",
+    question: merged("Squash and merge"),
+    done: "Squashed and merged.",
   },
   rebase: {
-    label: "变基合并",
-    question: merged("变基合并"),
-    done: "已变基合并。",
+    label: "Rebase and merge",
+    question: merged("Rebase and merge"),
+    done: "Rebased and merged.",
   },
   auto: {
-    label: "就绪后自动合并",
-    question: (pr) => `检查和审阅全部通过后自动合并 #${pr.number}？`,
-    done: "将在就绪后自动合并。",
+    label: "Merge when ready",
+    question: (pr) => `Merge #${pr.number} by itself once its checks and reviews pass?`,
+    done: "Will merge when ready.",
   },
   "cancel-auto": {
-    label: "取消自动合并",
-    question: (pr) => `停止 #${pr.number} 自动合并？`,
-    done: "不会再自动合并。",
+    label: "Cancel merge when ready",
+    question: (pr) => `Stop #${pr.number} from merging by itself?`,
+    done: "Won't merge by itself.",
   },
   close: {
-    label: "关闭",
-    question: (pr) => `关闭 #${pr.number}（不合并）？`,
-    done: "已关闭。",
+    label: "Close",
+    question: (pr) => `Close #${pr.number} without merging?`,
+    done: "Closed.",
   },
-  reopen: { label: "重新打开", question: (pr) => `重新打开 #${pr.number}？`, done: "已重新打开。" },
+  reopen: { label: "Reopen", question: (pr) => `Reopen #${pr.number}?`, done: "Reopened." },
 };
 
 // What can be done to this PR, the likeliest first.

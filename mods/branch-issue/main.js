@@ -85,19 +85,19 @@ class LinearIssues extends View {
     this.team = DEFAULT_SETTINGS.list.default.team;
     this.section = "overview";
     this.applySettings(cx);
-    this.search = InputState.new({ placeholder: "搜索 · ENG-123、123 或文本" });
+    this.search = InputState.new({ placeholder: "Search · ENG-123, 123 or text" });
     this.search.on("change", (_e, cx) => {
       if (!this.restoringSearch) this.searchChanged(cx);
     });
     this.linkInput = InputState.new({ placeholder: "ENG-123" });
     this.linkInput.on("submit", (_e, cx) => this.linkIssue(cx));
-    this.editor = TextareaState.new({ placeholder: "写一条评论…", rows: 4 });
+    this.editor = TextareaState.new({ placeholder: "Write a comment…", rows: 4 });
     this.editor.on("change", (_e, cx) => {
       if (this.draftKey) localStorage.setItem(this.draftKey, this.editor.value());
       cx.notify();
     });
     // Its own state, so a new comment stays put while a reply or handoff is being written.
-    this.newComment = TextareaState.new({ placeholder: "写一条评论…", rows: 4 });
+    this.newComment = TextareaState.new({ placeholder: "Write a comment…", rows: 4 });
     this.newComment.on("change", (_e, cx) => {
       if (this.commentKey) localStorage.setItem(this.commentKey, this.newComment.value());
       cx.notify();

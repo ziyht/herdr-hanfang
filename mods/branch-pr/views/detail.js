@@ -34,9 +34,9 @@ import {
 } from "./ui.js";
 
 const DECISIONS = {
-  APPROVED: { label: "已批准", color: "ansi2" },
-  CHANGES_REQUESTED: { label: "要求修改", color: "ansi1" },
-  REVIEW_REQUIRED: { label: "需要审阅", color: "ansi3" },
+  APPROVED: { label: "Approved", color: "ansi2" },
+  CHANGES_REQUESTED: { label: "Changes requested", color: "ansi1" },
+  REVIEW_REQUIRED: { label: "Review required", color: "ansi3" },
 };
 const AGENT_COLORS = { working: "working", blocked: "blocked", done: "done" };
 
@@ -73,7 +73,7 @@ export const detailMethods = {
     return IconButton({
       id: "pr-back",
       icon: "chevron-left",
-      label: "返回 PR 列表",
+      label: "Back to pull requests",
       disabled: this.mutating,
       onClick: (cx) => this.backToList(cx),
     });
@@ -107,10 +107,10 @@ export const detailMethods = {
       .border_b(1)
       .border_color(t.border)
       .role("tab_list")
-      .child(tab("overview", "概览"))
-      .child(tab("conversation", "评论", conversationEntries(pr).length))
-      .child(tab("checks", "检查", summary ? null : 0, summary && this.checkIcon(summary, t)))
-      .child(tab("files", "文件", pr.changedFiles ?? 0));
+      .child(tab("overview", "Overview"))
+      .child(tab("conversation", "Comments", conversationEntries(pr).length))
+      .child(tab("checks", "Checks", summary ? null : 0, summary && this.checkIcon(summary, t)))
+      .child(tab("files", "Files", pr.changedFiles ?? 0));
   },
 
   // Fixed above the tabs, so what to do next stays in sight.
@@ -147,7 +147,7 @@ export const detailMethods = {
             IconButton({
               id: "pr-detail-github",
               icon: "github",
-              label: "在 GitHub 上打开",
+              label: "Open on GitHub",
               onClick: (cx) => cx.open_url(pr.url),
             }).mr(-6),
           ),
@@ -242,14 +242,14 @@ export const detailMethods = {
     this.agentRows(body);
     this.reviewerRows(body, pr);
     this.worktreeRows(body);
-    this.group(body, { key: "description", label: "描述" }, (into) =>
+    this.group(body, { key: "description", label: "Description" }, (into) =>
       into.child(
         div()
           .px(8)
           .pt(2)
           .pb(10)
           .min_w(0)
-          .child(Markdown(`pr-description-${pr.id}`, pr.body || "没有描述。")),
+          .child(Markdown(`pr-description-${pr.id}`, pr.body || "No description provided.")),
       ),
     );
   },
@@ -278,9 +278,9 @@ export const detailMethods = {
     if (!events.length || this.mutating) return null;
     return this.chooser({
       id: "pr-actions",
-      accessibilityLabel: "此 PR 的操作",
+      accessibilityLabel: "Actions for this pull request",
       width: 220,
-      trigger: MenuButton({ id: "pr-actions-trigger", label: "操作" }),
+      trigger: MenuButton({ id: "pr-actions-trigger", label: "Actions" }),
       choices: events.map((id, i) => ({
         id,
         label: STATE_CHANGES[id].label,
@@ -319,7 +319,7 @@ export const detailMethods = {
               .whitespace_normal()
               .text_size(TEXT.small)
               .text_color(t.ansi1)
-              .child(`仍未满足的条件：${warning.join("、")}。`),
+              .child(`Still in the way: ${warning.join(", ")}.`),
           ),
         )
         .when(squash, (el) =>
@@ -327,7 +327,7 @@ export const detailMethods = {
             TextBox({
               id: "pr-squash-message",
               state: this.squashMessage,
-              label: "提交信息",
+              label: "Commit message",
               height: 130,
             }),
           ),
@@ -339,7 +339,7 @@ export const detailMethods = {
             .child(
               Button({
                 id: "pr-change-cancel",
-                label: "取消",
+                label: "Cancel",
                 disabled: this.mutating,
                 onClick: (cx) => {
                   this.stateChange = null;
@@ -369,7 +369,7 @@ export const detailMethods = {
       for (const agent of list)
         into.child(
           Row({ id: `pr-agent-${agent.address}`, onClick: () => this.focusAgent(agent) })
-            .tooltip("转到该 agent")
+            .tooltip("Go to this agent")
             .child(
               div()
                 .size(8)
@@ -390,10 +390,10 @@ export const detailMethods = {
     const open = pr.state === "OPEN";
     const action =
       decision && div().flex_none().text_color(t[decision.color]).child(decision.label);
-    const info = { key: "reviewers", label: "审阅者", count: pr.reviewers?.length ?? 0, action };
+    const info = { key: "reviewers", label: "Reviewers", count: pr.reviewers?.length ?? 0, action };
     this.group(body, info, (into) => {
-      if (pr.reviewersError) into.child(Message("无法读取审阅者。"));
-      else if (!pr.reviewers?.length) into.child(Message("还没有审阅者。"));
+      if (pr.reviewersError) into.child(Message("Could not read reviewers."));
+      else if (!pr.reviewers?.length) into.child(Message("No reviewers yet."));
       for (const reviewer of pr.reviewers ?? []) {
         const state = REVIEW_STATES[reviewer.state] ?? REVIEW_STATES.REQUESTED;
         into.child(
@@ -401,12 +401,12 @@ export const detailMethods = {
             .child(Icon(state.icon).text_color(t[state.color]).accessibility_label(state.label))
             .child(div().flex_1().min_w(0).truncate().tooltip(reviewer.login).child(reviewer.login))
             .child(div().flex_none().text_size(TEXT.caption).text_color(t.dim).child(state.label))
-            .when(open && reviewer.state !== "已请求", (el) =>
+            .when(open && reviewer.state !== "REQUESTED", (el) =>
               el.child(
                 IconButton({
                   id: `pr-reviewer-again-${reviewer.login}`,
                   icon: "refresh",
-                  label: `请 ${reviewer.login} 再次审阅`,
+                  label: `Ask ${reviewer.login} to review again`,
                   disabled: this.mutating,
                   onClick: (cx) => this.requestReviewAgain(reviewer.login, cx),
                 }),

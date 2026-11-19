@@ -34,9 +34,9 @@ export const filesMethods = {
   filesView(body) {
     const t = theme();
     const files = this.prFiles;
-    if (!files || files.loading) return body.child(Message("正在加载文件…"));
+    if (!files || files.loading) return body.child(Message("Loading files…"));
     if (files.error) return body.child(Message(files.error, true));
-    if (!files.list.length) return body.child(Message("没有文件变更。"));
+    if (!files.list.length) return body.child(Message("No files changed."));
     const tree = this.fileLayout === "tree";
     body.child(
       h_flex()
@@ -54,7 +54,7 @@ export const filesMethods = {
           IconButton({
             id: "pr-files-layout",
             icon: tree ? "flat" : "tree",
-            label: tree ? "列表显示" : "树形显示",
+            label: tree ? "Show as list" : "Show as tree",
             small: true,
             onClick: (cx) => {
               this.fileLayout = tree ? "flat" : "tree";

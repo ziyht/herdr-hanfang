@@ -1,0 +1,17 @@
+{
+  "mod: \"menu\",": "mod: \"menu-zh\",",
+  "mod: \"new-menu\",": "mod: \"new-menu-zh\",",
+  "\"Close tab\"": "\"关闭 tab\"",
+  "\"New tab\"": "\"新建 tab\"",
+  "\"Minimize\"": "\"最小化\"",
+  "\"Maximize\"": "\"最大化\"",
+  "\"Close window\"": "\"关闭窗口\"",
+  "\"More actions · drop a toolbar action here to hide it\"": "\"更多操作 · 把工具栏按钮拖到这里即可隐藏\"",
+  "\"Show in toolbar\"": "\"在工具栏显示\"",
+  "\"Drag a toolbar action onto ⋮ to hide it here.\"": "\"把工具栏按钮拖到 ⋮ 上即可隐藏到这里。\"",
+  "\"No hidden actions\"": "\"没有隐藏的按钮\"",
+  "Panel action references a missing container, stack, or child": "面板动作引用了不存在的容器、栈或子面板",
+  "Command name is required": "必须提供命令名",
+  "Unknown Better Tabs action type:": "未知的 Better Tabs 动作类型：",
+  " · Drag out or pin to show in toolbar": " · 拖出或置顶即可在工具栏显示"
+}

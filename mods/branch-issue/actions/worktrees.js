@@ -136,7 +136,7 @@ export const worktreeMethods = {
     const base = form.base;
     form.error = null;
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) {
-      form.error = "worktree 名称只能用字母、数字、点、横线或下划线。";
+      form.error = "Use letters, numbers, dots, dashes or underscores for the worktree name.";
       cx.notify();
       return;
     }
@@ -147,21 +147,21 @@ export const worktreeMethods = {
       const git = async (args) => {
         const result = await exec("git", args, { cwd: sp.folder, on: sp.machine });
         if (result.code !== 0)
-          throw new Error(result.stderr?.trim() || result.stdout?.trim() || "Git 命令失败。");
+          throw new Error(result.stderr?.trim() || result.stdout?.trim() || "Git command failed.");
         return result.stdout.trim();
       };
       try {
         if ((await git(["check-ref-format", "--branch", branch])) !== branch)
-          throw new Error("请输入字面分支名。");
+          throw new Error("Enter a literal branch name.");
         const existing = await exec(
           "git",
           ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`],
           { cwd: sp.folder, on: sp.machine },
         );
         if (existing.code === 0)
-          throw new Error("该分支已存在。请换一个分支名。");
+          throw new Error("That branch already exists. Choose a new branch name.");
         if (existing.code !== 1)
-          throw new Error(existing.stderr?.trim() || "无法检查现有分支。");
+          throw new Error(existing.stderr?.trim() || "Could not check existing branches.");
         const root = this.settings.worktrees.root.replace(/^~(?=\/|$)/, await this.homeOf(sp));
         const path = `${root}/${folderName(sp.folder)}/${name}`;
         const start = await this.worktreeStart(base, sp);

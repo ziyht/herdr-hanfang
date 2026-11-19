@@ -9,22 +9,22 @@ const PR_FIELDS =
 
 /** Terminal PR states win over draft/CI flags left over from when it was open. */
 export function prAppearance(pr, colors) {
-  if (pr.state === "MERGED") return { icon: "merged", color: colors.ansi5, label: "已合并" };
-  if (pr.state === "CLOSED") return { icon: "closed", color: colors.ansi1, label: "已关闭" };
-  if (pr.isDraft) return { icon: "draft", color: colors.dim, label: "草稿" };
+  if (pr.state === "MERGED") return { icon: "merged", color: colors.ansi5, label: "Merged" };
+  if (pr.state === "CLOSED") return { icon: "closed", color: colors.ansi1, label: "Closed" };
+  if (pr.isDraft) return { icon: "draft", color: colors.dim, label: "Draft" };
   const failed = (pr.statusCheckRollup ?? []).some((check) =>
     ["FAILURE", "ERROR", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE"].includes(
       String(check.conclusion || check.state || check.status).toUpperCase(),
     ),
   );
   const open = (color, label, ready = false) => ({ icon: "pull-request", color, label, ready });
-  if (pr.mergeStateStatus === "DIRTY") return open(colors.ansi1, "冲突");
-  if (failed) return open(colors.ansi1, "检查失败");
-  if (pr.reviewDecision === "CHANGES_REQUESTED") return open(colors.ansi3, "要求修改");
+  if (pr.mergeStateStatus === "DIRTY") return open(colors.ansi1, "Conflicts");
+  if (failed) return open(colors.ansi1, "Checks failed");
+  if (pr.reviewDecision === "CHANGES_REQUESTED") return open(colors.ansi3, "Changes requested");
   // CLEAN is GitHub's own "mergeable now": an empty decision means no review is required.
   if (pr.mergeStateStatus === "CLEAN" && (pr.reviewDecision === "APPROVED" || !pr.reviewDecision))
-    return open(colors.ansi2, "可以合并", true);
-  return open(colors.ansi2, "开放中");
+    return open(colors.ansi2, "Ready to merge", true);
+  return open(colors.ansi2, "Open");
 }
 
 /** Only github.com remotes are supported. Never pass an arbitrary remote URL to gh. */
@@ -109,14 +109,14 @@ export class PRStatusObserver {
     const head = await git(["symbolic-ref", "--quiet", "--short", "HEAD"]);
     if (head.code !== 0) {
       if (head.code === 1 || /not a git repository/i.test(head.stderr ?? "")) return [];
-      throw new Error("无法读取检出分支");
+      throw new Error("Cannot read checkout branch");
     }
     const branch = head.stdout.trim();
     // Explicit worktree bindings survive local branch renames and take
     // precedence over guessing a PR from matching head branch names.
     const association = await git(["config", "--get", `branch.${branch}.herdr-pr`]);
     if (association.code !== 0 && association.code !== 1)
-      throw new Error("无法读取 PR 关联");
+      throw new Error("Cannot read PR association");
     const binding = /^([\w.-]+\/[\w.-]+)#([1-9][0-9]*)$/.exec(association.stdout?.trim() ?? "");
     if (binding) {
       const pr = await this.query([
@@ -132,11 +132,11 @@ export class PRStatusObserver {
     }
 
     const remotes = await git(["remote"]);
-    if (remotes.code !== 0) throw new Error("无法读取 Git 远程");
+    if (remotes.code !== 0) throw new Error("Cannot read Git remotes");
     const repositories = new Set();
     for (const name of remotes.stdout.trim().split(/\r?\n/).filter(Boolean)) {
       const result = await git(["remote", "get-url", name]);
-      if (result.code !== 0) throw new Error("无法读取 Git 远程 URL");
+      if (result.code !== 0) throw new Error("Cannot read Git remote URL");
       const repository = githubRepository(result.stdout);
       if (repository) repositories.add(repository);
     }
@@ -185,7 +185,7 @@ export class PRStatusObserver {
     const at = Date.now();
     const result = await exec("gh", args);
     if (result.code !== 0)
-      throw new Error((result.stderr || "GitHub 不可用；请检查 gh auth login").trim());
+      throw new Error((result.stderr || "GitHub unavailable; check gh auth login").trim());
     const data = JSON.parse(result.stdout);
     this.cache.set(key, { at, data });
     return data;

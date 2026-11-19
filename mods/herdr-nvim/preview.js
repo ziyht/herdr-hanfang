@@ -86,14 +86,14 @@ async function readBytes(file) {
 // {kind, text} / {kind, src}, or {error}.
 async function load(file) {
   const kind = previewKind(file);
-  if (!kind) return { error: "无法预览此类文件。" };
+  if (!kind) return { error: "Can't preview this kind of file." };
   let data;
   try {
     data = kind === "markdown" ? await readText(file) : await readBytes(file);
   } catch {
-    return { error: "文件已不存在。" };
+    return { error: "The file is gone." };
   }
-  if (data.length > MAX_BYTES[kind]) return { error: `过大，无法预览（${(data.length / 1048576).toFixed(1)} MB）。` };
+  if (data.length > MAX_BYTES[kind]) return { error: `Too big to preview (${(data.length / 1048576).toFixed(1)} MB).` };
   if (kind === "markdown") return { kind, text: data };
   const ext = /\.([^./]+)$/.exec(file)[1].toLowerCase();
   return { kind, src: await cached(data, ext) };

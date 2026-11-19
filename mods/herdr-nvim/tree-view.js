@@ -23,7 +23,7 @@ import { GIT_EVERY_MS, TreeModel, dirname } from "./tree-model.js";
 import { markOf } from "./tree.js";
 import { KeyboardHandover, TabRoots } from "./tree-parts.js";
 
-const HINT = "? 按键";
+const HINT = "? keys";
 
 // `/` finds once typing pauses this long, one search at a time.
 const FIND_PAUSE_MS = 120;
@@ -283,7 +283,7 @@ export class Tree {
   async openRow(row, cx) {
     if (!row) return;
     if (row.dir) {
-      await this.model.toggle(row.abs).catch((e) => notify({ title: "无法打开文件夹", body: String(e), level: "error" }));
+      await this.model.toggle(row.abs).catch((e) => notify({ title: "Cannot open folder", body: String(e), level: "error" }));
       return cx.notify();
     }
     this.busy = true;
@@ -318,34 +318,34 @@ export class Tree {
     const rel = (path) => path.slice(this.model.root.length + 1);
     switch (name) {
       case "add":
-        return this.dialog({ kind: "input", title: "新建文件或文件夹", hint: `在 ${rel(this.dirOf(row)) || "."}/ — 以 / 结尾则建文件夹`,
+        return this.dialog({ kind: "input", title: "New file or folder", hint: `In ${rel(this.dirOf(row)) || "."}/ — end with / for a folder`,
           action: { type: "create", dir: this.dirOf(row) } });
       case "rename":
-        if (row) this.dialog({ kind: "input", title: "重命名", value: rel(row.abs), hint: "此文件夹内的路径；tab 的 nvim 会更新其缓冲区和语言服务器",
+        if (row) this.dialog({ kind: "input", title: "Rename", value: rel(row.abs), hint: "A path in this folder; the tab's nvim updates its buffers and language servers",
           action: { type: "rename", from: row.abs, base: this.model.root } });
         return;
       case "move": {
         if (!this.picked.size) return this.action("rename", row, cx);
         const dir = this.dirOf(row), paths = [...this.picked];
         this.picked.clear();
-        return this.dialog({ kind: "confirm", title: `移动 ${paths.length} 项到 ${rel(dir) || "."}/？`,
+        return this.dialog({ kind: "confirm", title: `Move ${paths.length} item${paths.length > 1 ? "s" : ""} to ${rel(dir) || "."}/?`,
           detail: paths.map(rel).join(", "), action: { type: "request", request: request.move(paths, dir) } });
       }
       case "copy":
         if (this.picked.size) {
           const paths = [...this.picked];
           this.picked.clear();
-          return this.dialog({ kind: "confirm", title: `复制 ${paths.length} 项到 ${rel(this.dirOf(row)) || "."}/？`,
+          return this.dialog({ kind: "confirm", title: `Copy ${paths.length} item${paths.length > 1 ? "s" : ""} to ${rel(this.dirOf(row)) || "."}/?`,
             detail: paths.map(rel).join(", "), action: { type: "request", request: request.copyInto(paths, this.dirOf(row)) } });
         }
-        if (row) this.dialog({ kind: "input", title: "复制到", value: row.name, hint: `在 ${rel(dirname(row.abs)) || "."}/ 下`,
+        if (row) this.dialog({ kind: "input", title: "Copy to", value: row.name, hint: `In ${rel(dirname(row.abs)) || "."}/`,
           action: { type: "copy", from: row.abs, base: dirname(row.abs) } });
         return;
       case "delete": {
         const paths = this.targets(row);
         this.picked.clear();
         if (paths.length) this.dialog({ kind: "confirm", title: `Delete ${paths.length === 1 ? rel(paths[0]) : `${paths.length} items`}?`,
-          detail: "它们在 tab 的 nvim 中的缓冲区也会关闭。", action: { type: "request", request: request.delete(paths) } });
+          detail: "Their buffers in the tab's nvim close too.", action: { type: "request", request: request.delete(paths) } });
         return;
       }
       case "yank": {
@@ -353,14 +353,14 @@ export class Tree {
         this.picked.clear();
         return cx.spawn(async (cx) => {
           const r = await fsOp(this.where(), request.yank(paths));
-          if (r) notify({ title: `已复制 ${r.count} 项`, level: "info", timeout: 2500 });
+          if (r) notify({ title: `Yanked ${r.count} item${r.count === 1 ? "" : "s"}`, level: "info", timeout: 2500 });
           cx.notify();
         });
       }
       case "paste": {
         const dir = this.dirOf(row);
         if (!inside(dir, this.where().cwd)) {
-          return this.dialog({ kind: "confirm", title: "粘贴到 tab 文件夹之外？", detail: dir,
+          return this.dialog({ kind: "confirm", title: "Paste outside this tab's folder?", detail: dir,
             action: { type: "request", request: { ...request.paste(dir), outside: true } } });
         }
         return cx.spawn(async () => { await fsOp(this.where(), request.paste(dir)); });
@@ -616,8 +616,8 @@ export class Tree {
       this.scrolledTo = key;
       this.scroll.scroll_to_item(this.selected);
     }
-    const empty = this.place?.machine ? `此空间位于 ${this.place.machine}；herdr-nvim 在本机运行 nvim。`
-      : this.error ?? (this.filter ? (this.filter.query ? "无匹配" : "输入以查找文件") : !this.model.root ? "没有文件夹" : this.model.entries.has(this.model.root) ? "没有文件" : "正在加载文件…");
+    const empty = this.place?.machine ? `This space is on ${this.place.machine}; herdr-nvim runs nvim on this computer.`
+      : this.error ?? (this.filter ? (this.filter.query ? "No match" : "Type to find a file") : !this.model.root ? "No folder" : this.model.entries.has(this.model.root) ? "No files" : "Loading files…");
     return v_flex().id("herdr-nvim-files").size_full().min_h(0).rounded(10).overflow_hidden()
       // The controller hands this tree the keyboard with `pane.go`, which
       // needs it laid out: say when it is.

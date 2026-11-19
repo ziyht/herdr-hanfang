@@ -24,7 +24,7 @@ export const readMethods = {
     return data;
   },
 
-  // Viewer and teams load once per panel: the team filter and the "我" assignee.
+  // Viewer and teams load once per panel: the team filter and the "Me" assignee.
   async ensureViewer() {
     if (this.me) return;
     const data = await this.api({ action: "viewer" });
