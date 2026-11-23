@@ -3,7 +3,7 @@
 // 悬停显示终端名,右键弹出与终端区一致的菜单(关闭、改名、分屏…)。
 import { div, svg, image, View } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, agents, run, openOverlay, theme, shared, setShared } from "herdr";
+import { spaces, panes, agents, run, openOverlay, theme, shared, setShared, hc } from "herdr";
 
 const TEXT = { caption: 11, label: 12.8 };
 
@@ -35,10 +35,65 @@ function running(p) {
 // 「运行中」的慢闪烁:黄色,一个来回 1.6 秒,原生动画(仅可见时运行)。
 const PULSE = { from: 1, to: 0.35, period: 1600 };
 
+// pi agent:按程序表识别(与 over9k 的判定一致)。
+function isPi(p) {
+  return p.app === "pi" || p.program?.key === "pi";
+}
+
+// pi 的页脚行:"↑5.5k ↓72 8.6%/66k (auto) …" —— 取上下文占比(参照 over9k)。
+function piFooter(text) {
+  for (const line of (text ?? "").split("\n").reverse()) {
+    const m = /(?:^|\s)(\d+(?:\.\d+)?)%\/\S+/.exec(line);
+    if (m) return Number(m[1]);
+  }
+  return null;
+}
+
+// 占比配色:<50% 绿,50–80% 黄,>80% 红(主题的 ansi 色)。
+function contextColor(t, pct) {
+  return pct >= 80 ? t.ansi1 : pct >= 50 ? t.ansi3 : t.ansi2;
+}
+
 export default class Rail extends View {
   init(_props, cx) {
     this.updateColors(spaces());
     cx.timer.every(1000, (cx) => this.updateColors(spaces()));
+    // pi agent 的上下文占比:轮询各 agent 屏幕末尾的页脚(参照 over9k)。
+    this.piContext = {}; // terminal address -> 上下文百分比
+    this.polling = false;
+    this.pollContext(cx);
+    cx.timer.every(5000, (cx) => this.pollContext(cx));
+  }
+
+  pollContext(cx) {
+    if (this.polling) return;
+    this.polling = true;
+    cx.spawn(async (cx) => {
+      const mine = panes().filter((p) => p.terminal && isPi(p));
+      let changed = false;
+      for (const p of mine) {
+        const r = await hc(["read", p.terminal, "--lines", "8"]).catch(() => null);
+        const pct = piFooter(r?.stdout);
+        if (pct === null) {
+          if (p.terminal in this.piContext) {
+            delete this.piContext[p.terminal];
+            changed = true;
+          }
+        } else if (this.piContext[p.terminal] !== pct) {
+          this.piContext[p.terminal] = pct;
+          changed = true;
+        }
+      }
+      const live = new Set(mine.map((p) => p.terminal));
+      for (const k of Object.keys(this.piContext)) {
+        if (!live.has(k)) {
+          delete this.piContext[k];
+          changed = true;
+        }
+      }
+      this.polling = false;
+      if (changed) cx.notify();
+    });
   }
 
   // 空间头像配色共享给应用自己的空间菜单;在数据同步时做,不在 render 里。
@@ -128,6 +183,8 @@ export default class Rail extends View {
     const busy = running(p);
     const color = busy ? t.ansi3 : tone(t, p.status);
     const program = p.program ?? {};
+    const pct = this.piContext[p.terminal];
+    const hasBar = pct !== undefined;
     const label = p.title || program.name || "终端";
     let icon = program.icon
       ? program.tint
@@ -149,7 +206,14 @@ export default class Rail extends View {
       .cursor_pointer()
       .when(p.focused, (el) => el.bg(t.selected))
       .when(!p.focused, (el) => el.hover((st) => st.bg(t.hover)))
-      .tooltip(program.name && program.name !== label ? `${label} · ${program.name}` : label)
+      .tooltip(
+        [
+          program.name && program.name !== label ? `${label} · ${program.name}` : label,
+          hasBar ? `上下文 ${pct}%` : null,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      )
       .on_click(() => {
         run("tab.select", { id: p.tab });
         run("pane.focus", { terminal: p.terminal });
@@ -161,12 +225,30 @@ export default class Rail extends View {
           div()
             .absolute()
             .right(-1)
-            .bottom(-1)
+            .when(hasBar, (d) => d.top(-1))
+            .when(!hasBar, (d) => d.bottom(-1))
             .size(5)
             .rounded(3)
             .bg(color)
             .when(busy, (d) => d.loop("opacity", PULSE)),
         ),
+      )
+      // 上下文进度条:图标底部,底轨 18px,填充宽度=占比,颜色随占比变。
+      .when(hasBar, (el) =>
+        el
+          .child(div().absolute().left(2).right(2).bottom(2).h(2).rounded(1).bg(t.border))
+          .when(pct > 0, (e) =>
+            e.child(
+              div()
+                .absolute()
+                .left(2)
+                .bottom(2)
+                .h(2)
+                .rounded(1)
+                .w(Math.max(2, Math.round((18 * pct) / 100)))
+                .bg(contextColor(t, pct)),
+            ),
+          ),
       );
   }
 
