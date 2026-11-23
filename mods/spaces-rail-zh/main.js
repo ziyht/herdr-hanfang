@@ -233,19 +233,18 @@ export default class Rail extends View {
             .when(busy, (d) => d.loop("opacity", PULSE)),
         ),
       )
-      // 上下文进度条:图标底部,底轨 18px,填充宽度=占比,颜色随占比变。
+      // 上下文进度条:图标底部,底轨 18px,1px 高,填充宽度=占比,颜色随占比变。
       .when(hasBar, (el) =>
         el
-          .child(div().absolute().left(2).right(2).bottom(2).h(2).rounded(1).bg(t.border))
+          .child(div().absolute().left(2).right(2).bottom(2).h(1).bg(t.border))
           .when(pct > 0, (e) =>
             e.child(
               div()
                 .absolute()
                 .left(2)
                 .bottom(2)
-                .h(2)
-                .rounded(1)
-                .w(Math.max(2, Math.round((18 * pct) / 100)))
+                .h(1)
+                .w(Math.max(1, Math.round((18 * pct) / 100)))
                 .bg(contextColor(t, pct)),
             ),
           ),
