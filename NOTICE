@@ -29,6 +29,11 @@ This product includes:
    - mods/herdr-nvim, mods/herdr-nvim-header from ChmaraX/herdr-nvim
      (MIT License): https://github.com/ChmaraX/herdr-nvim
      herdr-nvim-header is locally modified to reference the pane-zh header
+   - mods/hanfang-sidebar is a modified fork of better-sidebar, and
+     mods/hanfang-spaces/git/pr-status.js is copied from it (both Apache
+     License 2.0, munza/herdr-mods); the same license and attribution
+     apply. hermes-bridge/herdr-status.py is original work for this
+     project.
      mod instead of the shipped pane mod.
 
 3. Third-party assets:

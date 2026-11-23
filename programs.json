@@ -1,0 +1,5 @@
+{
+  "programs": {
+    "codex": { "icon": "my-icons/codex.svg", "tint": true, "name": "Codex" }
+  }
+}

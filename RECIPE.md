@@ -9,10 +9,10 @@
 ## 你会看到什么
 
 - 左侧 268px 侧栏:顶部品牌行(中文「设置」「添加机器」),
-  空间列表用自制的「空间轨道」(spaces-rail-zh)——每个空间一行,
+  空间列表用自制的「空间轨道」(hanfang-spaces)——每个空间一行,
   名下终端只画图标、横向换行排列,图标颜色跟随 agent 状态,
   悬停显示终端名,右键弹菜单(关闭、重命名标签页、分屏…);
-  agent 列表由 better-sidebar 接管(分组、置顶、按状态排序)
+  agent 列表由 hanfang-sidebar 接管(基于 better-sidebar 的汉坊分叉)(分组、置顶、按状态排序)
 - 顶部 42px 标签栏:better-tabs——可拖动、可换行的标签,工具栏面板按钮带 ⋮ 菜单
 - 中央终端:10px 圆角卡片;窗格表头是 herdr-nvim-header,显示程序/会话名与状态
 - 右侧 300px 可隐藏面板,五个标签页:
@@ -35,13 +35,20 @@
 ## 构成
 
 - 布局 `layouts/hanfang.json`(自 main 0.1.16 克隆演化):
-  root row [sidebar(brand 46 → workspace-chrome-zh / spaces w1 → spaces-rail-zh +
-  agents w1 → better-sidebar / footer 69 → workspace-chrome-zh),
+  root row [sidebar(brand 46 → workspace-chrome-zh / spaces w1 → hanfang-spaces +
+  agents w1 → hanfang-sidebar / footer 69 → workspace-chrome-zh),
   work(tabs 42 → better-tabs / work-body(main: tab active +
   herdr-nvim-header 表头 / panel 300 stack: herdr-nvim · better-changes ·
   branch-pr · branch-issue · better-files) / status 28 → workspace-status-zh)];
   根字段 toast=toast-zh、terminal_menu=menu-zh、floating herdr-nvim-sync
-- 自制 mod:spaces-rail-zh「空间轨道」(紧凑侧栏,空间行 + 终端图标横排)
+- 自制 mod:hanfang-spaces「空间轨道」(紧凑侧栏,空间行 + 终端图标横排、
+  拆分窗格分组框、悬停弹整空间终端清单[hanfang-tip 弹层,等宽字体随 UI
+  配置、状态与 token 用量分色、100ms 延时])
+- hanfang-sidebar:better-sidebar 的汉坊分叉(agents 视图)——图标状态色、
+  hermes 会话状态覆盖、token 进度条;原版 better-sidebar 干净休眠,换回
+  只需改布局一行
+- hermes-bridge/(可选):hermes 侧状态桥,六个 shell hook 事件 +
+  OSC 7501 自报,详见其 README
 - 中文 mod(9 个,-zh 家族,基于 0.1.16 源码翻译):workspace-chrome-zh、
   workspace-status-zh、menu-zh、toast-zh、machine-add-zh、picker-zh、
   worktree-zh、pane-zh、files-zh(供 herdr-nvim 还原原面板)

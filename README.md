@@ -2,7 +2,7 @@
 
 中文的 Herdr 桌面工作台:main 布局的骨架 + 社区最强 mod 组合
 (better-sidebar / better-tabs / better-changes / herdr-nvim / branch-pr /
-branch-issue / better-files)+ 自制紧凑侧栏「空间轨道」(spaces-rail-zh)+
+branch-issue / better-files)+ 自制紧凑侧栏「空间轨道」(hanfang-spaces)+
 全套中文界面。基于 **Herdr 0.1.16**。
 复刻说明见 [RECIPE.md](RECIPE.md)。
 
@@ -16,11 +16,19 @@ cd herdr-hanfang
 mkdir -p ~/.config/herdr-app/layouts ~/.config/herdr-app/mods
 cp layouts/hanfang.json ~/.config/herdr-app/layouts/
 cp -R mods/* ~/.config/herdr-app/mods/
+cp programs.json my-icons/ ~/.config/herdr-app/ 2>/dev/null || { cp programs.json ~/.config/herdr-app/; cp -R my-icons ~/.config/herdr-app/; }
 herdr-app do layout.switch '{"name":"hanfang"}'
 ```
 
+`programs.json` 覆盖 Codex 的图标为单色 OpenAI 标(随状态着色,与其它 agent 一致);
+不复制也不影响其它功能,只是 Codex 显示为默认的多色图标。
+
 可选主题:`cp themes/catppuccin.json ~/.config/herdr-app/themes/`
 然后 `herdr-app do app.theme --name catppuccin`。
+
+可选:Hermes agent 集成(图标/状态/上下文用量)。上述 mod 已内置支持,
+但需要 hermes 侧的状态桥(见仓库 `hermes-bridge/` 目录的安装说明)才能
+拿到状态与 token 数据;不装则 hermes 终端仅显示为普通图标。
 
 可选键位(herdr-nvim,合并进 keys.json 的 global 段,勿整份覆盖):
 
