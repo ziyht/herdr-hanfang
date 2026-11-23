@@ -5,8 +5,11 @@
 ## 这是什么
 
 Herdr 桌面版的中文工作台发布包:布局 `hanfang.json` + mod 全家桶 + 三层汉化。
-运行现场在 `~/.config/herdr-app/`,本仓库是发布母本。**两边要同步改**(改完现场
-记得拷回仓库对应文件;反之亦然)。
+运行现场在 `~/.config/herdr-app/`。**符号链接架构(2026-11-24 起):仓库即现场**——
+自有件(布局、hanfang-*/-zh mod、programs.json、my-icons、主题)由 install.sh 符号
+链接进现场,改现场=改仓库,git status 即时可见,无回写问题;例外件(社区 mod、
+zh-patch/zh-mods-patch 工具目录、keys.json、hermes-bridge)仍为拷贝/合并,
+**只有这些才有"两边同步"**,改完现场记得拷回仓库。
 
 ## 四层架构(改动前先定位你要动的层)
 
@@ -51,8 +54,9 @@ Herdr 桌面版的中文工作台发布包:布局 `hanfang.json` + mod 全家桶
 ## 验收清单(动过东西后)
 
 - 三个 hanfang mod:`herdr-app check` 通过、无 `*.error` 文件
-- zh-mods-patch 不变量:pristine+dict == 现场(对 better-sidebar 尤其)
-- 现场与仓库 diff 一致后才算同步完
+- zh-mods-patch 不变量:pristine+dict == 现场(对 better-sidebar 尤其;社区 mod 是例外件)
+- 符号链接健康:自有件(13 mod + 布局 + programs/my-icons/主题)链接在位、无断链
+  (`ls -l ~/.config/herdr-app/mods/ | grep '\->'`);例外件现场改过需拷回仓库
 - 新环境安装/换机后:hermes-bridge 三件套在位检查(agent-hooks/herdr-status.py、
   hooks 六事件注册、launcher OSC 段)——不随汉坊包安装、不随 ~/.hermes 迁移;
   有缺项必须向用户报备供选择,不得默默略过(2026-11-23 换机漏装实录)

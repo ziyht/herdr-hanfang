@@ -13,12 +13,14 @@ branch-issue / better-files)+ 自制紧凑侧栏「空间轨道」(hanfang-space
 ```sh
 git clone https://github.com/ziyht/herdr-hanfang.git
 cd herdr-hanfang
-mkdir -p ~/.config/herdr-app/layouts ~/.config/herdr-app/mods
-cp layouts/hanfang.json ~/.config/herdr-app/layouts/
-cp -R mods/* ~/.config/herdr-app/mods/
-cp programs.json my-icons/ ~/.config/herdr-app/ 2>/dev/null || { cp programs.json ~/.config/herdr-app/; cp -R my-icons ~/.config/herdr-app/; }
-herdr-app do layout.switch '{"name":"hanfang"}'
+./install.sh
 ```
+
+安装器采用**符号链接架构:仓库即现场**——汉坊自有件(布局、hanfang-*/-zh mod、
+programs.json、my-icons、主题)以符号链接接入 `~/.config/herdr-app/`,现场热编辑
+就是改仓库文件(git status 即时可见,不再有"两边同步"问题);社区 mod(better-*/
+branch-*/herdr-nvim*)保持拷贝并自动跑 zh-mods-patch 字典汉化;最后逐 mod check
+验收并切换布局。幂等,重复运行只修复缺失与断链,现场独立新内容先回写仓库再链。
 
 `programs.json` 覆盖 Codex 的图标为单色 OpenAI 标(随状态着色,与其它 agent 一致);
 不复制也不影响其它功能,只是 Codex 显示为默认的多色图标。
@@ -45,13 +47,9 @@ GitHub CLI(branch-pr)、`LINEARAPIKEY` 环境变量(branch-issue)。
 
 以上完成后,窗口框架(侧栏、标签栏、右键菜单、通知)即为中文。继续两步得到完整中文:
 
-**第二步:社区面板中文化**(better-*、branch-*、herdr-nvim 的界面文案;
-mod 是用户文件,保存即热重载,无需重启):
-
-```sh
-cp -R zh-mods-patch ~/.config/herdr-app/
-~/.config/herdr-app/zh-mods-patch/apply.sh
-```
+**第二步(社区面板中文化)已并入 install.sh**——安装器自动拷入 zh-mods-patch
+并对社区 mod 跑字典汉化(幂等,pristine/ 快照自动生成,`--restore` 可还原)。
+需要手工重跑时:`~/.config/herdr-app/zh-mods-patch/apply.sh`。
 
 **第三步(可选):原生界面中文化**——设置页、命令面板、欢迎页等,
 见下节 zh-patch。
