@@ -133,7 +133,7 @@ export default class Rail extends View {
           .text_color(st.color)
           .tooltip(`${pr.repository}#${pr.number} · ${st.label}\n${pr.title}`)
           .on_click(() => exec("open", [pr.url]).catch(() => {}))
-          .child(svg(`icons/${st.icon}.svg`).size(12).flex_none().text_color(st.color)),
+          .child(svg(`mods/hanfang-spaces/icons/${st.icon}.svg`).size(12).flex_none().text_color(st.color)),
       )
       .when(
         prs.length > 1,
@@ -267,6 +267,7 @@ export default class Rail extends View {
       .size(16)
       .flex_none()
       .rounded(4)
+      .opacity(0.55)
       .bg(fill)
       .items_center()
       .justify_center()
@@ -322,7 +323,7 @@ export default class Rail extends View {
       .child(
         div()
           .flex_none()
-          .text_size(TEXT.caption)
+          .text_size(12)
           .text_color(tone(t, this.spaceStatus(s)))
           .child(glyph(this.spaceStatus(s))),
       )
@@ -533,27 +534,36 @@ export default class Rail extends View {
       .id(`rail-chips-${s.id}`)
       .flex_wrap()
       .gap(4)
-      .px(8)
-      .pb(6)
+      .pl(14)
+      .pr(8)
+      .pb(5)
       .flex_none()
       .children(groups.map(part))
       .child(this.plusChip(s, t));
   }
 
-  // 远程机器的分隔标签(本机不占一行)。
-  machineLabel(m, t) {
+  // 机器分组头:本机也显示(monitor 图标),远程用 server;
+  // 名称带底色药丸(canvas),组间只留垂直间距,无分割线。
+  machineHeader(m, t, isLocal, isFirst) {
     return h_flex()
-      .id(`rail-machine-${m}`)
-      .h(18)
-      .mt(8)
+      .id(`rail-machine-${isLocal ? "local" : m}`)
+      .h(24)
       .px(10)
+      .mt(isFirst ? 2 : 10)
       .flex_none()
-      .gap(5)
+      .gap(6)
       .items_center()
-      .text_size(TEXT.caption)
-      .text_color(t.dim)
-      .child(svg("icons/server.svg").size(11).text_color(t.dim))
-      .child(m);
+      .bg(t.surface)
+      .text_size(12)
+      .font_medium()
+      .text_color(t.muted)
+      .child(
+        svg(isLocal ? "mods/hanfang-spaces/icons/monitor.svg" : "mods/hanfang-spaces/icons/server.svg")
+          .size(12)
+          .flex_none()
+          .text_color(t.muted),
+      )
+      .child(isLocal ? "本机" : m);
   }
 
   // ── 整体 ────────────────────────────────────────────────────────────────
@@ -611,17 +621,27 @@ export default class Rail extends View {
       .child(this.newSpaceButton(t));
   }
 
+  // 空间之间的淡分割线(同机器内;机器色带本身就是分界,不再叠加)。
+  spaceDivider(t) {
+    return div().mx(10).my(2).h(1).flex_none().bg(t.border).opacity(0.45);
+  }
+
   grouped(sp, t) {
     const out = [];
-    let seen = undefined; // undefined=还没遇到过机器;null=本机
-    for (const s of sp) {
-      const m = s.machine ?? null;
+    let seen = "__none__"; // 哨兵:还没遇到过任何机器
+    let first = true;
+    for (let i = 0; i < sp.length; i++) {
+      const s = sp[i];
+      const m = s.machine ?? null; // null=本机
       if (m !== seen) {
-        if (m !== null) out.push(this.machineLabel(m, t));
+        out.push(this.machineHeader(m, t, m === null, first));
         seen = m;
+        first = false;
       }
       out.push(this.spaceRow(s, t));
       out.push(this.chips(s, t));
+      const next = sp[i + 1];
+      if (next && (next.machine ?? null) === m) out.push(this.spaceDivider(t));
     }
     return out;
   }
