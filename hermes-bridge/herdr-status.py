@@ -17,10 +17,17 @@ STATUS_DIR = os.path.expanduser("~/.hermes/herdr-status")
 MAX_FILES = 60      # 汇总上限,超出只保留最新
 STALE_SEC = 86400   # 单条记录超过一天未更新即从汇总剔除
 
-EVENTS = ("pre_llm_call", "on_session_end", "pre_api_request", "post_api_request", "pre_tool_call", "post_tool_call")
+EVENTS = (
+    "pre_llm_call",
+    "on_session_end",
+    "pre_api_request",
+    "post_api_request",
+    "on_human_input_request",
+    "on_human_input_resolved",
+)
 
-# 只有 clarify(等用户输入)关心 pre/post_tool_call;其它工具不表态,避免状态抖动
-INPUT_TOOLS = {"clarify"}
+# on_human_input_request 的 kind → OSC 7501 的 blocked kind
+HUMAN_KINDS = {"clarify": "question", "approval": "permission", "sudo": "auth"}
 
 
 def session_cwd(session_id):
@@ -43,11 +50,11 @@ def state_of(event, payload):
     extra = payload.get("extra") or {}
     if event == "pre_llm_call":
         return "working"
-    if event == "pre_tool_call":
-        # clarify 等用户输入:blocked(Herdr 的「需要你」)
+    if event == "on_human_input_request":
+        # 即将阻塞等人:clarify 提问 / 危险命令审批 / sudo 密码
         return "blocked"
-    if event == "post_tool_call":
-        # 用户已作答,回合继续
+    if event == "on_human_input_resolved":
+        # 人已响应,回合继续
         return "working"
     if event == "post_api_request":
         # 回合级判定:这次响应还要调工具(working),没有工具调用即最终回复(done)。
@@ -79,10 +86,6 @@ def main():
     event = payload.get("hook_event_name") or payload.get("event") or ""
     if event not in EVENTS:
         return
-    # pre/post_tool_call 只关心等用户输入的工具(clarify),其余不表态
-    if event in ("pre_tool_call", "post_tool_call"):
-        if (payload.get("tool_name") or (payload.get("extra") or {}).get("tool_name")) not in INPUT_TOOLS:
-            return
     session = str(payload.get("session_id") or "unknown")
     cwd = payload.get("cwd") or os.getcwd()
     state = state_of(event, payload)
@@ -121,10 +124,12 @@ def main():
         pass
 
     if state:
-        seq = f"\x1b]7501;state={state}"
+        seq = "\x1b]7501;state=" + state
         if state == "blocked":
-            seq += ":kind=question"
+            k = payload.get("kind") or (payload.get("extra") or {}).get("kind")
+            seq += ":kind=" + HUMAN_KINDS.get(k, "question")
         seq += ":app=hermes\x1b\\"
+
         try:
             with open("/dev/tty", "w") as tty:
                 tty.write(seq)

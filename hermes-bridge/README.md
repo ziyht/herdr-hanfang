@@ -13,8 +13,8 @@ Herdr 通过终端的 OSC 7501 转义序列识别 agent;hermes 侧用 shell hook
 |---|---|
 | pre_llm_call | working(回合开始) |
 | post_api_request | 响应含工具调用→working;无→done(回合结束) |
-| pre_tool_call(clarify) | blocked(等用户输入) |
-| post_tool_call(clarify) | working(用户已答) |
+| on_human_input_request | blocked(等用户:提问/审批/sudo,kind 分别为 question/permission/auth) |
+| on_human_input_resolved | working(用户已响应) |
 | on_session_end | done/idle/error(会话关闭) |
 | pre_api_request | 上下文 token 数 + 模型(不表态) |
 

@@ -5,7 +5,7 @@ H="$HOME/.hermes/agent-hooks/herdr-status.py"
 mkdir -p "$HOME/.hermes/agent-hooks"
 cp "$(dirname "$0")/herdr-status.py" "$H"
 chmod +x "$H"
-for ev in pre_llm_call on_session_end pre_api_request post_api_request pre_tool_call post_tool_call; do
+for ev in pre_llm_call on_session_end pre_api_request post_api_request on_human_input_request on_human_input_resolved; do
   hermes config set "hooks.$ev" "[{\"command\": \"$H\", \"timeout\": 20}]" >/dev/null
 done
 hermes hooks revoke "$H" >/dev/null 2>&1 || true
