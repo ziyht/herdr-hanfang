@@ -27,7 +27,7 @@ herdr-app do layout.switch '{"name":"hanfang"}'
 然后 `herdr-app do app.theme --name catppuccin`。
 
 可选:Hermes agent 集成(图标/状态/上下文用量)。上述 mod 已内置支持,
-但需要 hermes 侧的状态桥(见仓库 `hermes-bridge/` 目录的安装说明)才能
+但需要 hermes 侧的状态桥(见下方「第四步」与 `hermes-bridge/` 目录)才能
 拿到状态与 token 数据;不装则 hermes 终端仅显示为普通图标。
 
 可选键位(herdr-nvim,合并进 keys.json 的 global 段,勿整份覆盖):
@@ -55,6 +55,28 @@ cp -R zh-mods-patch ~/.config/herdr-app/
 
 **第三步(可选):原生界面中文化**——设置页、命令面板、欢迎页等,
 见下节 zh-patch。
+
+**第四步(可选,本机跑 Hermes 则推荐):Hermes agent 集成**
+
+让 Herdr 把 hermes 终端识别为一等 agent:专属图标、真实状态(干活/
+完成/需要你)、上下文 token 用量与进度条。mod 侧已随第一步装好;
+hermes 侧的状态桥是**独立三件套——不随汉坊包安装、不随 ~/.hermes
+数据迁移,换新机必查**(2026-11-23 换机漏装实录):
+
+```sh
+cd hermes-bridge && ./install.sh   # ①hook 脚本 + ②六事件注册 + 一次性授权
+```
+
+③ launcher 自报段:install.sh 之后按 `hermes-bridge/README.md`
+「可选:启动自报」给 `~/.local/bin/hermes` 补上;hermes 升级会重新
+生成 launcher,届时需重加。
+
+> 给安装代理:本步**先检测、必询问**。检测三项:
+> `ls ~/.hermes/agent-hooks/herdr-status.py`、
+> `hermes hooks list | grep herdr`、`grep 7501 ~/.local/bin/hermes`。
+> 有缺项时向用户说明「未装则 hermes 终端只显示普通图标;安装会写
+> ~/.hermes/config.yaml 的 hooks 注册并跑一次授权」,由用户选择装或
+> 不装;三项齐全则跳过。不得当作普通可选依赖默默略过。
 
 > 给安装代理:zh-mods-patch 按字典就地修改已安装社区 mod 的文案
 > (幂等,pristine/ 快照自动生成,`--restore` 可还原);zh-patch 会原地替换

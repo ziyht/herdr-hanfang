@@ -53,3 +53,6 @@ Herdr 桌面版的中文工作台发布包:布局 `hanfang.json` + mod 全家桶
 - 三个 hanfang mod:`herdr-app check` 通过、无 `*.error` 文件
 - zh-mods-patch 不变量:pristine+dict == 现场(对 better-sidebar 尤其)
 - 现场与仓库 diff 一致后才算同步完
+- 新环境安装/换机后:hermes-bridge 三件套在位检查(agent-hooks/herdr-status.py、
+  hooks 六事件注册、launcher OSC 段)——不随汉坊包安装、不随 ~/.hermes 迁移;
+  有缺项必须向用户报备供选择,不得默默略过(2026-11-23 换机漏装实录)
