@@ -3,7 +3,7 @@
 // 悬停显示终端名,右键弹出与终端区一致的菜单(关闭、改名、分屏…)。
 import { div, svg, image, View } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, run, openOverlay, theme, shared, setShared } from "herdr";
+import { spaces, panes, agents, run, openOverlay, theme, shared, setShared } from "herdr";
 
 const TEXT = { caption: 11, label: 12.8 };
 
@@ -235,6 +235,8 @@ export default class Rail extends View {
   }
 
   header(t) {
+    // Agents 总数徽标(原组合视图标签条上的统计),点击跳到下一个 agent。
+    const n = agents().length;
     return h_flex()
       .h(31)
       .pl(16)
@@ -244,7 +246,30 @@ export default class Rail extends View {
       .justify_between()
       .text_size(TEXT.label)
       .text_color(t.dim)
-      .child("空间")
+      .child(
+        h_flex()
+          .gap(8)
+          .items_center()
+          .child("空间")
+          .when(n > 0, (el) =>
+            el
+              .child(div().text_color(t.border).child("·"))
+              .child(
+                h_flex()
+                  .id("rail-agents-count")
+                  .gap(4)
+                  .items_center()
+                  .rounded(5)
+                  .px(4)
+                  .cursor_pointer()
+                  .hover((st) => st.bg(t.hover))
+                  .tooltip("所有空间的 agent 总数 · 点击跳到下一个")
+                  .on_click(() => run("agent.next"))
+                  .child(div().text_color(t.muted).child("Agents"))
+                  .child(div().text_color(t.foreground).child(String(n))),
+              ),
+          ),
+      )
       .child(this.newSpaceButton(t));
   }
 
