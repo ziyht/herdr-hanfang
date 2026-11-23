@@ -29,10 +29,7 @@
               "id": "spaces",
               "type": "block",
               "content": {
-                "mod": "better-sidebar",
-                "props": {
-                  "view": "lists"
-                }
+                "mod": "spaces-rail-zh"
               },
               "size": {
                 "weight": 1

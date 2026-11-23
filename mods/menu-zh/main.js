@@ -41,6 +41,7 @@ function items(p, git) {
               ["向右分屏", "pane.split", { direction: "right", pane: tg.pane }],
               ["向下分屏", "pane.split", { direction: "down", pane: tg.pane }],
               ["缩放窗格", "pane.zoom", { pane: tg.pane }],
+              ["重命名标签页", "tab.rename", { id: panes().find((p) => p.pane === tg.pane)?.tab }],
             ]
           : []),
         ...(term

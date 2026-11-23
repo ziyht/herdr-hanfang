@@ -2,7 +2,8 @@
 
 中文的 Herdr 桌面工作台:main 布局的骨架 + 社区最强 mod 组合
 (better-sidebar / better-tabs / better-changes / herdr-nvim / branch-pr /
-branch-issue / better-files)+ 全套中文界面。基于 **Herdr 0.1.16**。
+branch-issue / better-files)+ 自制紧凑侧栏「空间轨道」(spaces-rail-zh)+
+全套中文界面。基于 **Herdr 0.1.16**。
 复刻说明见 [RECIPE.md](RECIPE.md)。
 
 ![预览](preview.png)

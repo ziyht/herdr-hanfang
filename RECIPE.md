@@ -9,8 +9,10 @@
 ## 你会看到什么
 
 - 左侧 268px 侧栏:顶部品牌行(中文「设置」「添加机器」),
-  better-sidebar 接管空间与 agent 列表——每个空间名旁带当前 Git 分支,
-  仓库的 PR 状态显示在右侧(需 GitHub CLI),worktree 空间嵌套在所属仓库下
+  空间列表用自制的「空间轨道」(spaces-rail-zh)——每个空间一行,
+  名下终端只画图标、横向换行排列,图标颜色跟随 agent 状态,
+  悬停显示终端名,右键弹菜单(关闭、重命名标签页、分屏…);
+  agent 列表由 better-sidebar 接管(分组、置顶、按状态排序)
 - 顶部 42px 标签栏:better-tabs——可拖动、可换行的标签,工具栏面板按钮带 ⋮ 菜单
 - 中央终端:10px 圆角卡片;窗格表头是 herdr-nvim-header,显示程序/会话名与状态
 - 右侧 300px 可隐藏面板,五个标签页:
@@ -33,11 +35,13 @@
 ## 构成
 
 - 布局 `layouts/hanfang.json`(自 main 0.1.16 克隆演化):
-  root row [sidebar(brand 46 → workspace-chrome-zh / better-sidebar / footer 69 →
-  workspace-chrome-zh), work(tabs 42 → better-tabs / work-body(main: tab active +
+  root row [sidebar(brand 46 → workspace-chrome-zh / spaces w1 → spaces-rail-zh +
+  agents w1 → better-sidebar / footer 69 → workspace-chrome-zh),
+  work(tabs 42 → better-tabs / work-body(main: tab active +
   herdr-nvim-header 表头 / panel 300 stack: herdr-nvim · better-changes ·
   branch-pr · branch-issue · better-files) / status 28 → workspace-status-zh)];
   根字段 toast=toast-zh、terminal_menu=menu-zh、floating herdr-nvim-sync
+- 自制 mod:spaces-rail-zh「空间轨道」(紧凑侧栏,空间行 + 终端图标横排)
 - 中文 mod(9 个,-zh 家族,基于 0.1.16 源码翻译):workspace-chrome-zh、
   workspace-status-zh、menu-zh、toast-zh、machine-add-zh、picker-zh、
   worktree-zh、pane-zh、files-zh(供 herdr-nvim 还原原面板)
@@ -69,9 +73,10 @@
 
 ## 验收
 
-- 17 个 mod 全部 `herdr-app check` 通过,`herdr-app status` errors 为空
-- `layout.switch {"name":"hanfang"}` 后:侧栏显示分支与 PR 状态,
-  标签栏可拖动换行,右键终端出中文菜单,状态栏显示「N 个 agent」
+- 18 个 mod 全部 `herdr-app check` 通过,`herdr-app status` errors 为空
+- `layout.switch {"name":"hanfang"}` 后:侧栏为空间轨道(终端图标横排、
+  状态着色,agent 列表在下半区),标签栏可拖动换行,右键终端出中文菜单,
+  状态栏显示「N 个 agent」
 - ⌘E 打开 nvim 文件树(装好 Neovim 后);面板五个标签页可切换
 - zh-mods-patch 应用后:变更、PR、议题面板与 nvim 文件树的界面文案为中文
   (发给 agent 的 prompt 保持英文)
