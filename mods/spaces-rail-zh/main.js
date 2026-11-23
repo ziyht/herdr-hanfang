@@ -26,6 +26,15 @@ function glyph(status) {
   return status === "blocked" || status === "done" ? "●" : "·";
 }
 
+// 运行中:agent 报告 working,或 shell 前台有程序在执行
+// (zsh 跑命令、nvim、kubectl…;与 better-sidebar 的 busy 判定一致)。
+function running(p) {
+  return p.status === "working" || !(p.program?.shell || p.program?.agent);
+}
+
+// 「运行中」的慢闪烁:黄色,一个来回 1.6 秒,原生动画(仅可见时运行)。
+const PULSE = { from: 1, to: 0.35, period: 1600 };
+
 export default class Rail extends View {
   init(_props, cx) {
     this.updateColors(spaces());
@@ -113,12 +122,14 @@ export default class Rail extends View {
       );
   }
 
-  // 一个终端的图标块:程序图标着状态色;不可着色的图片图标加状态角点。
+  // 一个终端的图标块:运行中变黄慢闪烁;其余状态着状态色;
+  // 不可着色的图片图标加状态角点。
   chip(p, t) {
-    const color = tone(t, p.status);
+    const busy = running(p);
+    const color = busy ? t.ansi3 : tone(t, p.status);
     const program = p.program ?? {};
     const label = p.title || program.name || "终端";
-    const icon = program.icon
+    let icon = program.icon
       ? program.tint
         ? svg(program.icon).size(13).text_color(color)
         : image(program.icon).size(13)
@@ -126,6 +137,7 @@ export default class Rail extends View {
           .text_size(TEXT.caption)
           .text_color(color)
           .child([...(program.name ?? "?")][0]?.toUpperCase() ?? "?");
+    if (busy) icon = icon.loop("opacity", PULSE);
     return h_flex()
       .id(`rail-term-${p.pane}`)
       .relative()
@@ -145,7 +157,16 @@ export default class Rail extends View {
       .on_mouse_down("right", () => this.menu("pane", { pane: p.pane, terminal: p.terminal }))
       .child(icon)
       .when(program.icon && !program.tint, (el) =>
-        el.child(div().absolute().right(-1).bottom(-1).size(5).rounded(3).bg(color)),
+        el.child(
+          div()
+            .absolute()
+            .right(-1)
+            .bottom(-1)
+            .size(5)
+            .rounded(3)
+            .bg(color)
+            .when(busy, (d) => d.loop("opacity", PULSE)),
+        ),
       );
   }
 
