@@ -40,7 +40,7 @@
               "id": "agents",
               "type": "block",
               "content": {
-                "mod": "better-sidebar",
+                "mod": "hanfang-sidebar",
                 "props": {
                   "view": "agents"
                 }
