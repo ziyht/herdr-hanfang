@@ -3,7 +3,7 @@
 // 关闭自管理:指针进入过弹层则在离开时关;从未进入且超过 0.7s 也关。
 import { div, View } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { theme, settings, props, closeOverlay, setShared } from "herdr";
+import { theme, settings, props, closeOverlay, setShared, run } from "herdr";
 
 const K = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1).replace(/\.0$/, "")}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : String(n));
 
@@ -43,9 +43,21 @@ export default class Tip extends View {
     return h_flex()
       .id(`tip-${l.key}`)
       .h(size + 7)
+      .px(4)
+      .mx(-4)
+      .rounded(5)
       .items_center()
       .gap(7)
       .text_size(size)
+      .cursor_pointer()
+      .hover((s) => s.bg(t.hover))
+      .on_click(() => {
+        // 跳到对应终端:切标签页 + 聚焦,然后收起弹层
+        run("tab.select", { id: l.tab });
+        run("pane.focus", { terminal: l.terminal });
+        const ov = props()?.overlay;
+        if (ov) closeOverlay(ov);
+      })
       .child(mono(div()).w(12).flex_none().text_color(t.accent).child(l.mine ? "▶" : ""))
       .child(
         mono(div())

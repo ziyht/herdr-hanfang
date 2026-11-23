@@ -402,6 +402,8 @@ export default class Rail extends View {
         program: program.name && program.name !== name ? program.name : null,
         pct,
         tokens: tokens ?? null,
+        tab: q.tab,
+        terminal: q.terminal,
       };
     });
     this.tipId = openOverlay({
