@@ -3,7 +3,7 @@
 // 悬停显示终端名,右键弹出与终端区一致的菜单(关闭、改名、分屏…)。
 import { div, svg, image, View } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, panes, agents, terminals, run, openOverlay, closeOverlay, theme, settings, shared, setShared, hc, readTextFile, home, exec, playSound } from "herdr";
+import { spaces, machines, panes, agents, terminals, run, openOverlay, closeOverlay, theme, settings, shared, setShared, hc, readTextFile, home, exec, playSound } from "herdr";
 import { PRStatusObserver, prPlaceKey, prAppearance } from "./git/pr-status.js";
 
 const TEXT = { caption: 11, label: 12.8 };
@@ -17,6 +17,9 @@ const AVATAR_COLORS = {
   ansi2: "#3fae6a",
   ansi1: "#d9649a",
 };
+
+// 断连机器的重连状态(模块级;热重载即重置,无持久化需求)。
+const RECONN = {};
 
 // 状态 → 主题色(沿用应用的色彩机制:t.working/blocked/done/idle/unknown)。
 function tone(t, status) {
@@ -544,7 +547,11 @@ export default class Rail extends View {
 
   // 机器分组头:本机也显示(monitor 图标),远程用 server;
   // 名称带底色药丸(canvas),组间只留垂直间距,无分割线。
-  machineHeader(m, t, isLocal, isFirst) {
+  // layout="unavailable"(断连)时灰显 + 「无法连接」标记,点击立即重连——
+  // 机器注册了就永远显示,不因断连从侧栏消失(现实逻辑:断连≠不存在)。
+  machineHeader(m, t, isLocal, isFirst, layout = "ready") {
+    const dead = !isLocal && layout === "unavailable";
+    const st = dead ? RECONN[m] : null;
     return h_flex()
       .id(`rail-machine-${isLocal ? "local" : m}`)
       .h(24)
@@ -556,14 +563,45 @@ export default class Rail extends View {
       .bg(t.surface)
       .text_size(12)
       .font_medium()
-      .text_color(t.muted)
+      .text_color(dead ? t.dim : t.muted)
+      .when(dead, (el) =>
+        el.cursor_pointer()
+          .hover((s) => s.bg(t.hover))
+          .tooltip(st?.error ? `${m} 无法连接:${st.error} · 点击重连` : `${m} 无法连接 · 点击重连`)
+          .on_click((_e, cx) => { cx.stop_propagation(); this.reconnect(m, cx); }))
       .child(
         svg(isLocal ? "mods/hanfang-spaces/icons/monitor.svg" : "mods/hanfang-spaces/icons/server.svg")
           .size(12)
           .flex_none()
-          .text_color(t.muted),
+          .text_color(dead ? t.dim : t.muted),
       )
-      .child(isLocal ? "本机" : m);
+      .child(isLocal ? "本机" : m)
+      .when(dead, (el) =>
+        el.child(div().text_size(10.5).text_color(t.dim).child(st?.busy ? "重连中…" : "无法连接")));
+  }
+
+  // 立即重连:非破坏性,只触发 hc machine login;成功后 machines()/spaces() 自动重渲染回正常态。
+  reconnect(name, cx) {
+    const st = RECONN[name] ??= { busy: false, error: null };
+    if (st.busy) return;
+    st.busy = true;
+    st.error = null;
+    cx.notify();
+    cx.spawn(async (cx) => {
+      try {
+        const r = await hc(["machine", "login", name]);
+        if (r.code !== 0) {
+          let msg;
+          try { msg = JSON.parse(r.stdout || r.stderr).error?.message; } catch {}
+          throw new Error(msg || r.stderr || r.stdout || "连接失败");
+        }
+        st.busy = false;
+      } catch (e) {
+        st.busy = false;
+        st.error = String(e.message ?? e);
+      }
+      cx.notify();
+    });
   }
 
   // ── 整体 ────────────────────────────────────────────────────────────────
@@ -627,14 +665,20 @@ export default class Rail extends View {
   }
 
   grouped(sp, t) {
+    // 机器注册表(machines() 恒含已注册机器,断连的 layout="unavailable"):
+    // 断连时 space.machine 会被读成 null,只按 space 分组会让机器整组消失——
+    // 所以分组 = space 的 machine ∪ 注册表,断连机器仍显示(灰态,见 machineHeader)。
+    const mstate = new Map(machines().filter((x) => x.name).map((x) => [x.name, x.layout]));
     const out = [];
     let seen = "__none__"; // 哨兵:还没遇到过任何机器
     let first = true;
+    const shown = new Set();
     for (let i = 0; i < sp.length; i++) {
       const s = sp[i];
       const m = s.machine ?? null; // null=本机
       if (m !== seen) {
-        out.push(this.machineHeader(m, t, m === null, first));
+        out.push(this.machineHeader(m, t, m === null, first, m === null ? "ready" : (mstate.get(m) ?? "ready")));
+        if (m) shown.add(m);
         seen = m;
         first = false;
       }
@@ -642,6 +686,12 @@ export default class Rail extends View {
       out.push(this.chips(s, t));
       const next = sp[i + 1];
       if (next && (next.machine ?? null) === m) out.push(this.spaceDivider(t));
+    }
+    // 注册了但当前没有 space 挂靠的断连机器(其 space 被并入本机组):尾部补灰态分组头。
+    for (const [name, layout] of mstate) {
+      if (!shown.has(name) && layout === "unavailable") {
+        out.push(this.machineHeader(name, t, false, false, "unavailable"));
+      }
     }
     return out;
   }
