@@ -79,6 +79,8 @@ function contextColor(t, pct) {
 
 export default class Rail extends View {
   init(_props, cx) {
+    // 机器折叠(参照 orca 的机器分隔:点机器头折叠整组,localStorage 持久)。
+    this.foldedMachines = new Set(JSON.parse(localStorage.getItem("rail.machines.folded") ?? "[]"));
     this.updateColors(spaces());
     cx.timer.every(1000, (cx) => this.updateColors(spaces()));
     // pi agent 的上下文占比:轮询各 agent 屏幕末尾的页脚(参照 over9k)。
@@ -545,39 +547,83 @@ export default class Rail extends View {
       .child(this.plusChip(s, t));
   }
 
-  // 机器分组头:本机也显示(monitor 图标),远程用 server;
-  // 名称带底色药丸(canvas),组间只留垂直间距,无分割线。
-  // layout="unavailable"(断连)时灰显 + 「无法连接」标记,点击立即重连——
-  // 机器注册了就永远显示,不因断连从侧栏消失(现实逻辑:断连≠不存在)。
-  machineHeader(m, t, isLocal, isFirst, layout = "ready") {
+  // 机器分组头(参照 orca 的分隔方式):机器之间一条 1px 规则线(首台无),
+  // 栏本身是 26px 悬停圆角条——chevron 折叠整机(localStorage 持久)、monitor/server
+  // 图标、semibold 前景色名称、右端 6px 连接圆点(绿=连通/灰=断)。space 之间不再画线
+  // (分隔靠机器段与行悬停,orca 同样做法)。
+  // 断连(layout="unavailable")时灰显 + 「重连」小按钮;机器注册了就永远显示,
+  // 不因断连从侧栏消失(现实逻辑:断连≠不存在)。
+  machineHeader(m, t, isLocal, isFirst, layout = "ready", count = 0) {
     const dead = !isLocal && layout === "unavailable";
     const st = dead ? RECONN[m] : null;
-    return h_flex()
+    const key = isLocal ? "__local__" : m;
+    const folded = this.foldedMachines.has(key);
+    const bar = h_flex()
       .id(`rail-machine-${isLocal ? "local" : m}`)
-      .h(24)
-      .px(10)
-      .mt(isFirst ? 2 : 10)
+      .h(26)
+      .mx(8)
+      .mt(isFirst ? 2 : 0)
+      .pl(4)
+      .pr(6)
       .flex_none()
       .gap(6)
       .items_center()
-      .bg(t.surface)
-      .text_size(12)
-      .font_medium()
-      .text_color(dead ? t.dim : t.muted)
-      .when(dead, (el) =>
-        el.cursor_pointer()
-          .hover((s) => s.bg(t.hover))
-          .tooltip(st?.error ? `${m} 无法连接:${st.error} · 点击重连` : `${m} 无法连接 · 点击重连`)
-          .on_click((_e, cx) => { cx.stop_propagation(); this.reconnect(m, cx); }))
+      .rounded(7)
+      .cursor_pointer()
+      .hover((s) => s.bg(t.hover))
+      .tooltip(dead ? (st?.error ? `${m} 无法连接:${st.error}` : `${m} 无法连接`) : folded ? "展开分组" : "折叠分组")
+      .on_click((_e, cx) => {
+        if (!this.foldedMachines.delete(key)) this.foldedMachines.add(key);
+        localStorage.setItem("rail.machines.folded", JSON.stringify([...this.foldedMachines]));
+        cx.notify();
+      })
+      .child(svg(`mods/hanfang-spaces/icons/chevron-${folded ? "right" : "down"}.svg`).size(12).flex_none().text_color(t.dim))
       .child(
         svg(isLocal ? "mods/hanfang-spaces/icons/monitor.svg" : "mods/hanfang-spaces/icons/server.svg")
-          .size(12)
+          .size(13)
           .flex_none()
           .text_color(dead ? t.dim : t.muted),
       )
-      .child(isLocal ? "本机" : m)
+      .child(
+        div()
+          .flex_1()
+          .min_w(0)
+          .truncate()
+          .font_semibold()
+          .text_size(12)
+          .text_color(dead ? t.dim : t.foreground)
+          .child(isLocal ? "本机" : m),
+      )
       .when(dead, (el) =>
-        el.child(div().text_size(10.5).text_color(t.dim).child(st?.busy ? "重连中…" : "无法连接")));
+        el.child(
+          div()
+            .id(`rail-reconnect-${m}`)
+            .flex_none()
+            .px(5)
+            .rounded(4)
+            .text_size(10.5)
+            .text_color(t.muted)
+            .cursor_pointer()
+            .hover((s) => s.bg(t.hover).text_color(t.foreground))
+            .on_click((_e, cx) => { cx.stop_propagation(); this.reconnect(m, cx); })
+            .child(st?.busy ? "重连中…" : "重连"),
+        ))
+      .when(folded, (el) => el.child(div().flex_none().text_size(10.5).text_color(t.dim).child(String(count))))
+      .child(
+        div()
+          .size(6)
+          .mx(2)
+          .rounded(3)
+          .flex_none()
+          .bg(dead ? t.dim : t.ansi2)
+          .tooltip(dead ? (st?.busy ? "重连中" : "未连接") : "已连接"),
+      );
+    // 机器间一条规则线;首台之前没有。
+    return v_flex()
+      .id(`rail-machine-section-${isLocal ? "local" : m}`)
+      .flex_none()
+      .when(!isFirst, (el) => el.child(div().h(1).mx(10).mt(10).mb(6).flex_none().bg(t.border)))
+      .child(bar);
   }
 
   // 立即重连:非破坏性,只触发 hc machine login;成功后 machines()/spaces() 自动重渲染回正常态。
@@ -659,11 +705,7 @@ export default class Rail extends View {
       .child(this.newSpaceButton(t));
   }
 
-  // 空间之间的淡分割线(同机器内;机器色带本身就是分界,不再叠加)。
-  spaceDivider(t) {
-    return div().mx(10).my(2).h(1).flex_none().bg(t.border).opacity(0.45);
-  }
-
+  // 分组:机器段(见 machineHeader)+ 该机空间;空间之间不画线,由行悬停与段结构分隔。
   grouped(sp, t) {
     // 机器注册表(machines() 恒含已注册机器,断连的 layout="unavailable"):
     // 断连时 space.machine 会被读成 null,只按 space 分组会让机器整组消失——
@@ -673,19 +715,25 @@ export default class Rail extends View {
     let seen = "__none__"; // 哨兵:还没遇到过任何机器
     let first = true;
     const shown = new Set();
+    // 每台机器的空间数(机器折叠时在头右侧显示)。
+    const counts = new Map();
+    for (const s of sp) {
+      const k = s.machine ?? "__local__";
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
     for (let i = 0; i < sp.length; i++) {
       const s = sp[i];
       const m = s.machine ?? null; // null=本机
       if (m !== seen) {
-        out.push(this.machineHeader(m, t, m === null, first, m === null ? "ready" : (mstate.get(m) ?? "ready")));
+        const key = m ?? "__local__";
+        out.push(this.machineHeader(m, t, m === null, first, m === null ? "ready" : (mstate.get(m) ?? "ready"), counts.get(key) ?? 0));
         if (m) shown.add(m);
         seen = m;
         first = false;
       }
+      if (this.foldedMachines.has(m ?? "__local__")) continue; // 折叠:跳过该机空间
       out.push(this.spaceRow(s, t));
       out.push(this.chips(s, t));
-      const next = sp[i + 1];
-      if (next && (next.machine ?? null) === m) out.push(this.spaceDivider(t));
     }
     // 注册了但当前没有 space 挂靠的断连机器(其 space 被并入本机组):尾部补灰态分组头。
     for (const [name, layout] of mstate) {
