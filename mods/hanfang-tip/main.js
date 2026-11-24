@@ -22,7 +22,8 @@ export default class Tip extends View {
     const t = theme();
     const s = settings();
     const font = (s && s.ui_font) || "Menlo";
-    const size = (s && s.ui_font_size) || 12.5;
+    // 弹层比界面字号收 1.5(12.5→11);等宽字体观感偏大,克制一点。
+    const size = Math.max(9, ((s && s.ui_font_size) || 12.5) - 1.5);
     const lines = props()?.lines ?? [];
     return v_flex()
       .id("hanfang-tip")

@@ -388,7 +388,8 @@ export default class Rail extends View {
     if (this.tipId) closeOverlay(this.tipId);
     this.tipGen += 1;
     const s = settings();
-    const size = s.ui_font_size ?? 12.5;
+    // 与 hanfang-tip 显示字号一致(弹层收 1.5,行高按它算)。
+    const size = Math.max(9, (s.ui_font_size ?? 12.5) - 1.5);
     const list = all ?? [p];
     // 名称回退链:重命名过的标签页名 > 终端名(hc)> 程序设置的标题 > 程序名;
     // 拆分标签页(同名多行)拼上各自的标题以示区分。
