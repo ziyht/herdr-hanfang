@@ -26,6 +26,25 @@ EVENTS = (
     "on_human_input_resolved",
 )
 
+# Hermes 回合结束后会在同一会话里跑"后台回顾"回合(记忆/技能整理),它会触发
+# pre_llm_call 并把状态改成 working —— 用户眼里就是"活干完了图标又开始闪"。
+# 这些内部提示词以固定文字开头,直接忽略,不让它们影响状态。
+INTERNAL_PROMPTS = (
+    "review the conversation above",
+    "update the skill library",
+    "summarize the conversation",
+)
+
+
+def is_internal_turn(payload) -> bool:
+    msg = payload.get("user_message")
+    if isinstance(msg, dict):
+        msg = msg.get("content")
+    elif isinstance(msg, (list, tuple)):
+        msg = " ".join(str(m.get("content") if isinstance(m, dict) else m) for m in msg)
+    text = str(msg or "").strip().lower()
+    return any(text.startswith(p) for p in INTERNAL_PROMPTS)
+
 # on_human_input_request 的 kind → OSC 7501 的 blocked kind
 HUMAN_KINDS = {"clarify": "question", "approval": "permission", "sudo": "auth"}
 
@@ -47,8 +66,11 @@ def session_cwd(session_id):
 
 
 def state_of(event, payload):
-    extra = payload.get("extra") or {}
+    # 顶层字段 + extra 包一层都认(真实 wire 是顶层)
+    extra = {**payload, **(payload.get("extra") or {})}
     if event == "pre_llm_call":
+        if is_internal_turn(payload):
+            return None  # 后台回顾回合:不算"在干活"
         return "working"
     if event == "on_human_input_request":
         # 即将阻塞等人:clarify 提问 / 危险命令审批 / sudo 密码
@@ -86,13 +108,19 @@ def main():
     event = payload.get("hook_event_name") or payload.get("event") or ""
     if event not in EVENTS:
         return
+    # 真实 wire 格式:字段在顶层(旧版/合成样例会包一层 extra)——两层合并后再判,
+    # 否则 post_api_request 的 finish_reason / assistant_tool_call_count 读不到,
+    # 每个事件都落回默认值 working,回合结束后图标一直闪。
+    extra = payload.get("extra") or {}
+    fields = {**payload, **extra}
     session = str(payload.get("session_id") or "unknown")
     cwd = payload.get("cwd") or os.getcwd()
-    state = state_of(event, payload)
-    # 真实 wire 格式:事件字段包在 extra 里(合成样例是平铺的,两层都兼容)
-    extra = payload.get("extra") or {}
+    state = state_of(event, fields)
 
-    rec = {"state": state or "working", "cwd": cwd, "session_id": session, "ts": int(time.time())}
+    # 只有真的判定出状态才覆盖,否则保留上一次(增量合并)
+    rec = {"cwd": cwd, "session_id": session, "ts": int(time.time())}
+    if state:
+        rec["state"] = state
     # Herdr 终端环境自带 HC_TERMINAL_ID,记录之供 mod 精确匹配(非 Herdr 环境无此项)
     if os.environ.get("HC_TERMINAL_ID"):
         rec["terminal"] = os.environ["HC_TERMINAL_ID"]
