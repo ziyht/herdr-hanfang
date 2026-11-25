@@ -55,8 +55,22 @@ function isHermes(p) {
 // 面板 OSC 只在启动时报一次 idle,非 working 状态一律以会话记录为准。
 const HERMES_STATE = { working: "working", done: "done", idle: "idle", error: "idle", blocked: "blocked" };
 
-// hermes 各模型的上下文窗口(token),用于占比;未知模型用默认值。
-const HERMES_WINDOW = { "glm-5.3-inner": 1000000, default: 131072 };
+// hermes 页脚(Hermes 自己渲染的那行):
+//   " ☤ DeepSeek-V4.1-Flash-1017 · 327K/1M · [███░░░░░░░] 31% · ◎ 66.5% · …"
+// 直接用它的用量/上限/占比:模型换不换、窗口多大都不用猜,和用户看到的一致。
+function hermesFooter(text) {
+  for (const line of (text ?? "").split("\n").reverse()) {
+    const m = /(\d+(?:\.\d+)?)\s*([kKmM])?\s*\/\s*(\d+(?:\.\d+)?)\s*([kKmM])\b[^\n]*?(\d+(?:\.\d+)?)\s*%/.exec(line);
+    if (!m) continue;
+    const scale = (u) => (/m/i.test(u ?? "") ? 1e6 : /k/i.test(u ?? "") ? 1e3 : 1);
+    return { used: Math.round(Number(m[1]) * scale(m[2])), limit: Math.round(Number(m[3]) * scale(m[4])), pct: Number(m[5]) };
+  }
+  return null;
+}
+
+// 页脚读不到时(无终端会话)的兜底:按模型记住页脚报过的窗口(localStorage),
+// 从没见过的模型按 1M 算——比原来写死 131072 靠谱得多。
+const WINDOWS_KEY = "rail.context.windows";
 
 // pi 的页脚行:"↑5.5k ↓72 8.6%/66k (auto) …" —— 取上下文占比(参照 over9k)。
 function piFooter(text) {
@@ -102,6 +116,10 @@ export default class Rail extends View {
     this.over = null;
     this.dragged = false;
     this.piContext = {}; // terminal address -> 上下文百分比
+    // hermes 页脚直接读出来的用量/上限/占比:terminal address -> {used, limit, pct}
+    this.hermesScreen = {};
+    // 模型 -> 窗口(从页脚学到后记住,JSON 兜底时用)
+    try { this.windows = JSON.parse(localStorage.getItem(WINDOWS_KEY) ?? "{}"); } catch { this.windows = {}; }
     this.polling = false;
     this.pollContext(cx);
     cx.timer.every(5000, (cx) => this.pollContext(cx));
@@ -226,10 +244,29 @@ export default class Rail extends View {
     if (this.polling) return;
     this.polling = true;
     cx.spawn(async (cx) => {
-      const mine = panes().filter((p) => p.terminal && isPi(p));
+      const mine = panes().filter((p) => p.terminal && (isPi(p) || isHermes(p)));
       let changed = false;
       for (const p of mine) {
-        const r = await hc(["read", p.terminal, "--lines", "8"]).catch(() => null);
+        const r = await hc(["read", p.terminal, "--lines", "12"]).catch(() => null);
+        if (isHermes(p)) {
+          // hermes:同一块屏的页脚里就有 Hermes 自己算的用量/上限/占比
+          const f = hermesFooter(r?.stdout);
+          if (JSON.stringify(this.hermesScreen[p.terminal]) !== JSON.stringify(f ?? null)) {
+            if (f) this.hermesScreen[p.terminal] = f;
+            else delete this.hermesScreen[p.terminal];
+            changed = true;
+          }
+          // 顺手把该模型的真实窗口记住,供页脚读不到时兜底
+          if (f) {
+            const rec = this.hermesRec(p);
+            const model = rec?.model ?? null;
+            if (model && this.windows[model] !== f.limit) {
+              this.windows[model] = f.limit;
+              localStorage.setItem(WINDOWS_KEY, JSON.stringify(this.windows));
+            }
+          }
+          continue;
+        }
         const f = piFooter(r?.stdout);
         if (f === null) {
           if (p.terminal in this.piContext) {
@@ -247,6 +284,19 @@ export default class Rail extends View {
           delete this.piContext[k];
           changed = true;
         }
+      }
+      for (const k of Object.keys(this.hermesScreen)) {
+        if (!live.has(k)) {
+          delete this.hermesScreen[k];
+          changed = true;
+        }
+      }
+      // 发布给 Agents 侧栏(hanfang-sidebar):它显示同一批终端的 token 占比,
+      // 直接用这里从 Hermes 页脚读到的数,避免两处各算一套、数字对不上。
+      const pubSig = JSON.stringify(this.hermesScreen);
+      if (pubSig !== this.ctxSig) {
+        this.ctxSig = pubSig;
+        setShared("hanfang.context", this.hermesScreen);
       }
       this.polling = false;
       if (changed) cx.notify();
@@ -420,9 +470,13 @@ export default class Rail extends View {
         detail: `上下文 ${pct.pct}%`,
         tokens: `${k(Math.round((pct.limit * pct.pct) / 100))}/${k(pct.limit)}`,
       };
+    // hermes:优先用页脚里 Hermes 自己算的那一套(和终端里显示的一致);
+    // 页脚读不到(无终端会话/正在滚动)时才退回 JSON 里的 context_tokens。
+    const screen = this.hermesScreen?.[q.terminal];
+    if (screen) return { pct: screen.pct, detail: `上下文 ${screen.used}/${screen.limit} tok(${screen.pct}%)`, tokens: `${k(screen.used)}/${k(screen.limit)}` };
     rec = rec ?? (isHermes(q) ? this.hermesRec(q) : null);
     if (!rec) return {};
-    const window = HERMES_WINDOW[(rec.model ?? "").toLowerCase()] ?? HERMES_WINDOW.default;
+    const window = this.windows?.[rec.model ?? ""] ?? 1000000;
     pct = Math.min(100, Math.round((rec.context_tokens / window) * 1000) / 10);
     return { pct, detail: `上下文 ${rec.context_tokens}/${window} tok(${pct}%)`, tokens: `${k(rec.context_tokens)}/${k(window)}` };
   }

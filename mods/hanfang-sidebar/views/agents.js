@@ -22,7 +22,8 @@ import {
 } from "herdr";
 
 // ── Hermes 会话桥(与 spaces-rail-zh 同源:~/.hermes/herdr-status/_latest.json)──
-const HERMES_WINDOW = { "glm-5.3-inner": 1000000, default: 131072 };
+// 窗口不再写死:hanfang-spaces 每 5 秒从 Hermes 页脚学到"模型 → 窗口"写进
+// localStorage("rail.context.windows"),这里与它共用。
 
 function isHermesAgent(a) {
   return a.app === "hermes" || a.program?.key === "hermes";
@@ -426,6 +427,12 @@ export class Agents {
         this.hermesRecs = next;
         cx.notify();
       }
+      // 轨道侧的页脚数据一变就重绘(百分比来自那边)
+      const sig = JSON.stringify(shared("hanfang.context") ?? {});
+      if (sig !== this.ctxSig) {
+        this.ctxSig = sig;
+        cx.notify();
+      }
     });
   }
 
@@ -445,11 +452,18 @@ export class Agents {
     return (this.hermesRecOf(a) && HERMES_STATE[this.hermesRecOf(a).state]) || null;
   }
 
+  // hermes 的 token 占比:优先用空间轨道从 Hermes 页脚读到的数(和终端里显示的一致),
+  // 没有则退回 JSON 的 context_tokens,窗口用页脚学到的值(localStorage 共用),否则 1M。
   hermesPctOf(a) {
+    const ctx = shared("hanfang.context") ?? {};
+    const there = ctx[a.address];
+    if (there && typeof there.pct === "number") return there.pct;
     const rec = this.hermesRecOf(a);
     if (!rec) return undefined;
-    const window = HERMES_WINDOW[(rec.model ?? "").toLowerCase()] ?? HERMES_WINDOW.default;
-    return Math.min(100, Math.round((rec.context_tokens / window) * 1000) / 10);
+    let windows = {};
+    try { windows = JSON.parse(localStorage.getItem("rail.context.windows") ?? "{}"); } catch { /* 忽略坏值 */ }
+    const limit = windows[rec.model ?? ""] ?? 1000000;
+    return Math.min(100, Math.round((rec.context_tokens / limit) * 1000) / 10);
   }
 
   // Everything one render needs: the agents in order, in their groups.
