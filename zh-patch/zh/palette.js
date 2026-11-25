@@ -2,12 +2,14 @@
 // Places (spaces, tabs) stay in the picker. Fuzzy: your letters in
 // order, word starts and runs rank higher. Empty: recent first, then every
 // group. Choices are entries of their own ("Layout: Zen"); commands that need
-// a name ask for it. Enter runs, ↑/↓ move, Esc closes.
+// a name ask for it. Mods add entries of their own with `palette` in their
+// mod.json. Enter runs, ↑/↓ move, Esc closes.
 // The app's own mod: rewritten from the binary on every start.
 
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
-import { commands, layouts, keys, run, theme, props, closeOverlay, openOverlay, shared, window as win } from "herdr";
+import { exists, readdir, readFile } from "fs/promises";
+import { appHome, commands, layouts, keys, run, theme, themes, settings, props, closeOverlay, openOverlay, shared, window as win } from "herdr";
 
 // The list keeps one height while you move: rows and group titles have fixed
 // heights, and the window shows as many as fit in LIST_H.
@@ -17,12 +19,37 @@ const SHOWN = 10;
 const ROW_H = 32;
 const HEAD_H = 26;
 const LIST_H = SHOWN * ROW_H;
-const GROUPS = ["最近使用", "标签页", "窗格", "空间", "布局", "终端", "agent", "窗口", "应用"];
+const GROUPS = ["最近使用", "标签页", "窗格", "空间", "布局", "终端", "agent", "窗口", "模块", "应用"];
+
+// 分类标题各自上色(只用主题槽,不硬编码):分组一眼可辨,标题前再加一小段色条。
+const GROUP_SLOTS = {
+  "最近使用": "muted", "标签页": "ansi4", "窗格": "ansi5", "空间": "ansi2", "布局": "ansi3",
+  "终端": "ansi6", agent: "ansi5", "窗口": "ansi4", "模块": "ansi3", "应用": "ansi6",
+};
+const groupColor = (t, name) => t[GROUP_SLOTS[name]] ?? t.accent;
+
+// 主题里的 ansi 槽在本机这个深色主题下偏暗,直接用来当标题色对比不够:
+// 往前台色调一半,既保留各分组的色相,又比条目文字更醒目。
+const asHex = (c) => {
+  const s = typeof c === "string" ? c.trim() : "";
+  const m = /^#?([0-9a-f]{6})$/i.exec(s);
+  return m ? m[1] : null;
+};
+const mix = (a, b, k) => {
+  const A = asHex(a), B = asHex(b);
+  if (!A || !B) return a;
+  const out = [0, 2, 4].map((i) => {
+    const x = parseInt(A.slice(i, i + 2), 16), y = parseInt(B.slice(i, i + 2), 16);
+    return Math.round(x + (y - x) * k).toString(16).padStart(2, "0");
+  });
+  return `#${out.join("")}`;
+};
+const groupInk = (t, name) => mix(groupColor(t, name), t.foreground, 0.25); // 保留色相,只提亮两成半
 
 // The palette's names for commands: [command, args, group, title, keywords].
 const NAMED = [
   ["tab.new", {}, "标签页", "新建标签页", "tab agent new task agent 任务"],
-  ["mod.open", { name: "picker" }, "标签页", "跳转到空间或标签页…", "switch jump find 切换 跳转 查找"],
+  ["mod.open", { name: "picker-zh" }, "标签页", "跳转到空间或标签页…", "switch jump find 切换 跳转 查找"],
   ["tab.rename", {}, "标签页", "重命名标签页", "tab"],
   ["tab.close", {}, "标签页", "关闭标签页", "tab kill 关闭"],
   ["tab.next", {}, "标签页", "下一个标签页", "tab"],
@@ -58,8 +85,12 @@ const NAMED = [
   ["app.zoom_in", {}, "应用", "放大界面", "bigger font size 字体"],
   ["app.zoom_out", {}, "应用", "缩小界面", "smaller font size 字体"],
   ["app.zoom_reset", {}, "应用", "还原缩放", "font size 字体"],
+  ["pane.rename", {}, "窗格", "重命名窗格", "pane name 重命名 名称"],
+  ["app.check_updates", {}, "应用", "检查更新", "update herdr core 更新 检查"],
+  ["app.update_core", {}, "应用", "更新 herdr-core", "core update 核心 更新"],
+  ["app.update", {}, "应用", "重启并安装更新", "restart update 重启 安装 更新"],
+  ["app.feedback", {}, "应用", "发送反馈", "feedback 反馈 意见"],
   ["app.quit", {}, "应用", "退出 Herdr", "exit"],
-  ...["graphite", "ink", "moss", "atom-one-dark"].map((n) => ["app.theme", { name: n }, "应用", `主题：${n.replace(/-/g, " ")}`, "颜色 外观"]),
 ];
 
 // Commands that act on something you point at (ids, terminals): not for a list.
@@ -69,6 +100,9 @@ const HIDDEN = new Set([
   "layout.show", "layout.hide", "layout.resize", "layout.select", "mod.open", "overlay.close",
   "tab.settle", "tab.unsettle",
   "app.palette", "app.hide", "app.hide_others", "app.show_all", "app.theme", "app.settings",
+  // 0.1.18 新增的终端底层动作:作用于焦点终端,给命令列表只会制造噪音
+  "terminal.select_all", "terminal.select", "terminal.clear_selection", "terminal.scroll",
+  "terminal.paste_image", "terminal.search",
 ]);
 
 function titleOf(name) {
@@ -76,32 +110,135 @@ function titleOf(name) {
   return { group: noun.charAt(0).toUpperCase() + noun.slice(1), title: `${verb.replace(/_/g, " ")} ${noun}`.replace(/^./, (c) => c.toUpperCase()) };
 }
 
+const isObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+
+// The `palette` list of each mods/<name>/mod.json; unreadable ones are skipped.
+export async function modPalettes(root) {
+  const dir = `${root}/mods`;
+  const found = [];
+  let names;
+  try {
+    names = new Set((await readdir(dir)).filter((n) => !n.startsWith(".")).sort());
+  } catch {
+    return found;
+  }
+  for (const mod of names) {
+    try {
+      const list = JSON.parse(await readFile(`${dir}/${mod}/mod.json`, "utf8")).palette;
+      if (!Array.isArray(list)) continue;
+      for (const p of list) {
+        if (!isObject(p)) continue;
+        if (p.command === "mod.open") {
+          const name = p.args?.name;
+          try {
+            if (!names.has(name) || !await exists(`${dir}/${name}/main.js`)) continue;
+          } catch {
+            continue;
+          }
+        }
+        found.push({ ...p, mod });
+      }
+    } catch {}
+  }
+  return found;
+}
+
+const TARGET_ARGS = new Set(["id", "pane", "space", "terminal", "target"]);
+
+// Check the manifest shape here; the command still checks its arguments and live targets.
+function modEntry(p, known) {
+  if (typeof p.title !== "string" || !p.title.trim() || typeof p.command !== "string") return null;
+  const args = p.args ?? {};
+  if (!isObject(args)) return null;
+  const c = known.get(p.command);
+  if (c) {
+    const names = c.args.map((a) => a.name);
+    for (const [k, v] of Object.entries(args)) {
+      if (!names.includes(k) || (TARGET_ARGS.has(k) && v != null && typeof v !== "string")) return null;
+    }
+    for (const { name, required } of c.args) {
+      if (!required || (name === "name" && p.command.endsWith(".rename") && args.name == null)) continue;
+      if (args[name] == null || (typeof args[name] === "string" && !args[name].trim())) return null;
+    }
+  } else {
+    const at = p.command.indexOf(".");
+    if (at < 1 || p.command.slice(0, at) !== p.mod || !p.command.slice(at + 1).trim() || Object.keys(args).length) return null;
+  }
+  const group = typeof p.group === "string" ? p.group.trim() : "";
+  return {
+    name: p.command, args, group: group && group !== "最近使用" ? group : "模块",
+    title: p.title, words: `${typeof p.words === "string" ? p.words : ""} ${p.mod}`,
+    modArgs: c?.args,
+  };
+}
+
+function entryId(name, args) {
+  return `${name}:${JSON.stringify(args, (_k, value) =>
+    isObject(value) ? Object.fromEntries(Object.keys(value).sort().map((k) => [k, value[k]])) : value)}`;
+}
+
 // Every entry for the state we're in now.
-function entries() {
-  const known = new Set(commands().map((c) => c.name));
+function entries(mods = []) {
+  const known = new Map(commands().map((c) => [c.name, c]));
   const mac = win()?.platform === "macos";
   const list = NAMED.filter(([n]) => known.has(n))
     .filter(([n]) => !(mac && n.startsWith("window.")))
     .map(([name, args, group, title, words]) => ({ name, args, group, title, words }));
-  for (const l of layouts()) {
+  const shown = layouts();
+  for (const l of shown) {
     const t = { main: "Herdr", terminals: "Terminals", win98: "Herdr 98", hanfang: "汉坊" }[l] ?? l.charAt(0).toUpperCase() + l.slice(1);
-    list.push({ name: "layout.switch", args: { name: l }, group: "布局", title: `布局：${t}`, words: `布局 ${l}` });
+    list.push({ name: "layout.switch", args: { name: l }, group: "布局", title: `布局：${t}`, words: `look 布局 ${l}` });
+  }
+  // `app.theme` sets the half of its theme's lightness, so only the themes
+  // that can show now are offered: dark ones in a dark window, light ones in a
+  // light one. A theme named like a layout is that layout's own (as in Settings).
+  const dark = Boolean(settings().dark);
+  for (const { name, light } of themes()) {
+    if (Boolean(light) === dark || (name !== shared("layout") && shown.includes(name))) continue;
+    list.push({ name: "app.theme", args: { name }, group: "应用", title: `主题：${name.replace(/-/g, " ")}`, words: "colors look 颜色 外观" });
   }
   // Anything new in the app shows up too, until it gets a better name here.
   const named = new Set(NAMED.map(([n]) => n));
-  for (const c of commands()) {
+  for (const c of known.values()) {
     if (named.has(c.name) || HIDDEN.has(c.name) || c.args.some((a) => a.required && a.name !== "name")) continue;
     list.push({ name: c.name, args: {}, ...titleOf(c.name), words: c.about });
   }
-  return list.map((e) => ({ ...e, id: `${e.name}:${JSON.stringify(e.args)}` }));
+  const all = list.map((e) => ({ ...e, id: `${e.name}:${JSON.stringify(e.args)}` }));
+  if (!mods.length) return all;
+  const have = new Set(all.map((e) => entryId(e.name, e.args)));
+  for (const p of mods) {
+    const e = modEntry(p, known);
+    const id = e && entryId(e.name, e.args);
+    if (!e || have.has(id)) continue;
+    have.add(id);
+    all.push({ ...e, id });
+  }
+  return all;
 }
 
-// The key bound to an entry: `name` or `name:value` in keys.json.
+// The global key whose action runs the same command and arguments.
 function keyOf(e, bound) {
-  const v = Object.values(e.args)[0];
-  const want = v === undefined ? e.name : `${e.name}:${v}`;
-  const k = bound.find((b) => b.section === "global" && b.action === want);
-  return k ? k.keys : null;
+  const [first, ...other] = Object.keys(e.args);
+  const value = e.args[first];
+  let want = first === undefined ? e.name : null;
+  if (typeof value === "string" || typeof value === "number") {
+    const numericIndex = e.modArgs?.some((a) => a.name === "index") && /^\+?\d+$/.test(String(value));
+    const shorthand = numericIndex
+      ? first === "index" && Number.isSafeInteger(value) && value >= 0
+      : first === e.modArgs?.[0]?.name && typeof value === "string";
+    if (!e.modArgs || (!other.length && shorthand)) want = `${e.name}:${value}`;
+  }
+  for (const { section, keys, action } of bound) {
+    if (section !== "global") continue;
+    if (action === want) return keys;
+    if (e.modArgs && action.startsWith("{")) {
+      try {
+        const { command, args = {} } = JSON.parse(action);
+        if (command === e.name && entryId(command, args) === e.id) return keys;
+      } catch {}
+    }
+  }
+  return null;
 }
 
 // "ctrl-shift-p" -> ["ctrl", "shift", "p"]; "ctrl--" -> ["ctrl", "-"].
@@ -141,6 +278,13 @@ export default class Palette extends View {
     this.scroll = 0;
     this.recent = JSON.parse(localStorage.getItem("recent") ?? "[]");
     this.handle = cx.focus_handle();
+    this.mods = [];
+    cx.spawn(async (cx) => {
+      const mods = await modPalettes(appHome());
+      if (!mods.length) return;
+      this.mods = mods;
+      cx.notify();
+    });
   }
 
   close() {
@@ -152,19 +296,19 @@ export default class Palette extends View {
     this.recent = [e.id, ...this.recent.filter((r) => r !== e.id)].slice(0, 20);
     localStorage.setItem("recent", JSON.stringify(this.recent));
     this.close();
-    if (e.name === "mod.clone") {
+    if (e.name === "mod.clone" && !e.args.name) {
       openOverlay({ mod: "prompt", kind: "dialog", width: 380, props: {
         title: "复制模块", hint: "要复制的模块；会创建 <name>-copy",
         command: { name: "mod.clone", args: {} },
       } });
     } else {
-      run(e.name, e.name === "layout.clone" ? { name: shared("layout") ?? "main" } : e.args);
+      run(e.name, e.name === "layout.clone" && !e.args.name ? { name: shared("layout") ?? "main" } : e.args);
     }
   }
 
   // The rows to show: grouped when empty, ranked while typing.
   rows() {
-    const all = entries();
+    const all = entries(this.mods);
     const q = this.query.trim().toLowerCase().replace(/\s+/g, "");
     if (!q) {
       const recent = this.recent.map((id) => all.find((e) => e.id === id)).filter(Boolean).slice(0, 5);
@@ -241,7 +385,28 @@ export default class Palette extends View {
     const list = [];
     rows.forEach((r, i) => {
       const { head, title, row } = tops[i];
-      if (head && visible(title, row)) list.push(place(h_flex(), title, row).px(14).pb(4).items_end().text_size(11).font_semibold().text_color(t.dim).child(r.head));
+      if (head && visible(title, row))
+        list.push(
+          place(h_flex(), title, row)
+            .px(14)
+            .pb(4)
+            .items_center()
+            .gap(6)
+            .child(
+              h_flex()
+                .items_center()
+                .gap(5)
+                .px(6)
+                .py(2)
+                .rounded(4)
+                .bg(t.selected)
+                .text_size(11.5)
+                .font_semibold()
+                .text_color(groupInk(t, r.head))
+                .child(div().w(3).h(10).rounded(1).bg(groupColor(t, r.head)))
+                .child(r.head),
+            ),
+        );
       if (!visible(row, row + ROW_H)) return;
       const on = i === this.at;
       const k = keyOf(r.e, bound);
@@ -259,7 +424,7 @@ export default class Palette extends View {
           .hover((s) => s.bg(t.hover))
           .on_click(() => this.go(r.e))
           .child(div().flex_1().min_w(0).child(this.title(t, r.e.title, r.hits, on)))
-          .when(Boolean(this.query), (el) => el.child(div().text_size(11.5).text_color(t.dim).child(r.e.group)))
+          .when(Boolean(this.query), (el) => el.child(div().text_size(11.5).text_color(groupInk(t, r.e.group)).child(r.e.group)))
           .when(Boolean(k), (el) => el.child(key(k))),
       );
     });

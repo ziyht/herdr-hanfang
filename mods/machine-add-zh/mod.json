@@ -8,5 +8,16 @@
   "cloned_from": {
     "name": "machine-add",
     "version": "0.1.16"
-  }
+  },
+  "palette": [
+    {
+      "title": "添加机器",
+      "command": "mod.open",
+      "args": {
+        "name": "machine-add-zh"
+      },
+      "words": "machine ssh host add 机器 添加 主机",
+      "group": "应用"
+    }
+  ]
 }

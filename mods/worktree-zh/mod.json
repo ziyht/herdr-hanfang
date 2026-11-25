@@ -3,5 +3,16 @@
   "cloned_from": {
     "name": "worktree",
     "version": "0.1.16"
-  }
+  },
+  "palette": [
+    {
+      "title": "新建工作树",
+      "command": "mod.open",
+      "args": {
+        "name": "worktree-zh"
+      },
+      "words": "worktree git branch checkout 工作树 检出 分支",
+      "group": "空间"
+    }
+  ]
 }

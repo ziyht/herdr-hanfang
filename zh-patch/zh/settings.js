@@ -544,7 +544,7 @@ export default class Settings extends View {
         this.row(
           t,
           "终端字体粗细",
-          own("font_weight", s.font_weight, 500) ? "这个布局有自己的设置；你的设置会用在其它布局里。" : "粗体始终为 700。",
+          own("font_weight", s.font_weight, 500) ? "这个布局有自己的设置；你的设置会用在其它布局里。" : `粗体字重为 ${s.font_weight_bold ?? 700}（settings.json 里的 font_weight_bold）。`,
           this.stepper(t, "st-font_weight", `${s.font_weight}`, (_e, cx) => step("font_weight", s.font_weight, -100, 100, 900, cx), (_e, cx) => step("font_weight", s.font_weight, 100, 100, 900, cx)),
         ),
       )

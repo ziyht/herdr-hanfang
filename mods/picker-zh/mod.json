@@ -11,5 +11,16 @@
   "cloned_from": {
     "name": "picker",
     "version": "0.1.16"
-  }
+  },
+  "palette": [
+    {
+      "title": "跳转到空间或标签页…",
+      "command": "mod.open",
+      "args": {
+        "name": "picker-zh"
+      },
+      "words": "switch jump find go to space tab 切换 跳转 查找 空间 标签页",
+      "group": "应用"
+    }
+  ]
 }

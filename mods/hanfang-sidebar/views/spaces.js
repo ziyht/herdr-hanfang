@@ -640,6 +640,9 @@ export class Spaces {
   }
 
   // Press to select or start a drag; spaces only move within their machine.
+  // The window-level move/up (0.1.18) keep the drag tracking once the pointer
+  // leaves the row, or the sidebar: hovering anywhere over the row's box picks
+  // it as the drop target, and a release anywhere still commits.
   withDragging(row, w, i) {
     return row
       .on_mouse_down("left", () => {
@@ -647,23 +650,44 @@ export class Spaces {
         this.over = i;
       })
       .on_mouse_move((_e, cx) => {
+        if (this.pressed === null) return;
         const source = spaces()[this.pressed];
         const over = source && (source.machine ?? null) === (w.machine ?? null) ? i : null;
-        if (this.pressed !== null && this.over !== over) {
+        if (this.over !== over) {
           this.over = over;
           cx.notify();
         }
       })
-      .on_mouse_up("left", (_e, cx) => {
-        const from = this.pressed;
-        const over = this.over;
-        this.pressed = null;
-        this.over = null;
-        if (from !== null && over === i && from !== i)
-          run("space.move", { id: spaces()[from].id, index: i + 1 });
-        else if (from === i) run("space.select", { id: w.id });
-        cx.notify();
-      });
+      .on_window_mouse_move((e, cx) => {
+        if (this.pressed === null || e.pressed_button !== "left") return;
+        const b = e.bounds;
+        const inside = b && e.local_position.x >= 0 && e.local_position.y >= 0 &&
+          e.local_position.x <= b.width && e.local_position.y <= b.height;
+        if (!inside) return;
+        const source = spaces()[this.pressed];
+        const over = source && (source.machine ?? null) === (w.machine ?? null) ? i : null;
+        if (this.over !== over) {
+          this.over = over;
+          cx.notify();
+        }
+      })
+      .on_mouse_up("left", (_e, cx) => this.dropOn(i, w, cx))
+      .on_window_mouse_up("left", (_e, cx) => this.dropOn(i, w, cx));
+  }
+
+  // Where a release lands: on the row it started from it is a plain click.
+  // Every row sees the window-level release, so only the drop target commits —
+  // the row that was pressed must not consume the release on its way past.
+  dropOn(i, w, cx) {
+    if (this.pressed === null || i !== this.over) return;
+    const from = this.pressed;
+    const over = this.over;
+    this.pressed = null;
+    this.over = null;
+    if (from !== null && over === i && from !== i)
+      run("space.move", { id: spaces()[from].id, index: i + 1 });
+    else if (from === i) run("space.select", { id: w.id });
+    cx.notify();
   }
 
   rowTitle(w, g, tree, t) {

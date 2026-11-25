@@ -77,6 +77,19 @@ function contextColor(t, pct) {
   return pct >= 80 ? t.ansi1 : pct >= 50 ? t.ansi3 : t.ansi2;
 }
 
+// 拖动排序的落点指示线:atTop = 画在行顶,否则画在底边。
+function dropLine(t, atTop) {
+  return div()
+    .absolute()
+    .left(0)
+    .right(0)
+    .h(2)
+    .rounded(1)
+    .bg(t.accent)
+    .when(atTop, (line) => line.top(0))
+    .when(!atTop, (line) => line.bottom(0));
+}
+
 export default class Rail extends View {
   init(_props, cx) {
     // 机器折叠(参照 orca 的机器分隔:点机器头折叠整组,localStorage 持久)。
@@ -84,6 +97,10 @@ export default class Rail extends View {
     this.updateColors(spaces());
     cx.timer.every(1000, (cx) => this.updateColors(spaces()));
     // pi agent 的上下文占比:轮询各 agent 屏幕末尾的页脚(参照 over9k)。
+    // 拖动排序状态:pressed = 按下的空间下标,over = 指针所在行,dragged = 刚拖过(抑制随后的 click)
+    this.pressed = null;
+    this.over = null;
+    this.dragged = false;
     this.piContext = {}; // terminal address -> 上下文百分比
     this.polling = false;
     this.pollContext(cx);
@@ -136,7 +153,7 @@ export default class Rail extends View {
           .items_center()
           .cursor_pointer()
           .text_color(st.color)
-          .tooltip(`${pr.repository}#${pr.number} · ${st.label}\n${pr.title}`)
+          .when(this.pressed === null, (el) => el.tooltip(`${pr.repository}#${pr.number} · ${st.label}\n${pr.title}`))
           .on_click(() => exec("open", [pr.url]).catch(() => {}))
           .child(svg(`mods/hanfang-spaces/icons/${st.icon}.svg`).size(12).flex_none().text_color(st.color)),
       )
@@ -146,7 +163,7 @@ export default class Rail extends View {
           el
             .text_size(TEXT.caption)
             .text_color(t.dim)
-            .tooltip(prs.map((p) => `${p.repository}#${p.number}`).join("\n"))
+            .when(this.pressed === null, (el) => el.tooltip(prs.map((p) => `${p.repository}#${p.number}`).join("\n")))
             .child(`+${prs.length - 1}`),
       );
   }
@@ -298,9 +315,12 @@ export default class Rail extends View {
     return best ?? s.status;
   }
 
-  spaceRow(s, t) {
-    return h_flex()
+  // 一行空间。拖动排序(0.1.18 窗口级 move/up):指针离开本行、甚至拖出侧栏仍跟手;
+  // 松手落在哪一行就把该空间移到那一位(space.move,1 = 第一个)。只在同一台机器内允许。
+  spaceRow(s, t, i) {
+    const row = h_flex()
       .id(`rail-space-${s.id}`)
+      .relative()
       .h(24)
       .mx(8)
       .mb(2)
@@ -312,15 +332,34 @@ export default class Rail extends View {
       .cursor_pointer()
       .when(s.active, (el) => el.bg(t.selected))
       .when(!s.active, (el) => el.hover((st) => st.bg(t.hover)))
-      .on_click(() => run("space.select", { id: s.id }))
+      .when(this.pressed === i && this.over !== i, (el) => el.opacity(0.5))
+      .on_click(() => {
+        // 拖完松手也会算一次点击:别把刚排好的空间又切过去。
+        if (this.dragged) {
+          this.dragged = false;
+          return;
+        }
+        run("space.select", { id: s.id });
+      })
+      .on_mouse_down("left", (_e, cx) => {
+        this.pressed = i;
+        this.over = i;
+        this.dragged = false;
+        // 开始拖:收起已经在显示的悬停弹层,并重绘(其它行的悬停提示同时撤掉)
+        this.tipPending = null;
+        this.tipChipHovered = false;
+        if (this.tipId) { closeOverlay(this.tipId); this.tipId = null; }
+        cx.notify();
+      })
       .on_mouse_down("right", () => this.menu("space", { id: s.id }))
+      .on_window_mouse_move((e, cx) => this.dragOver(i, s, e, cx))
+      .on_window_mouse_up("left", (_e, cx) => this.dropOn(i, cx))
       .child(this.avatar(s, t))
       .child(
         div()
           .flex_1()
           .min_w(0)
           .truncate()
-          .tooltip(s.name)
           .text_size(TEXT.label)
           .text_color(s.active ? t.foreground : t.muted)
           .child(s.name),
@@ -333,6 +372,42 @@ export default class Rail extends View {
           .child(glyph(this.spaceStatus(s))),
       )
       .child(this.prBadge(s, t));
+    // 落点指示线(往上拖):显示在本行顶部。往下拖那条画在目标空间终端清单的下方
+    // (见 chips()),否则会插在空间行与它自己的终端图标之间。
+    if (this.pressed !== null && this.over === i && this.pressed > i)
+      row.child(dropLine(t, true));
+    return row;
+  }
+
+  // 窗口级移动命中:指针在本元素框内、且按下的是同一台机器的空间时,把它记为落点。
+  // 空间行和它下面的终端清单都挂这个,往哪块上瞄都算落在这个空间。
+  dragOver(i, s, e, cx) {
+    if (this.pressed === null || e.pressed_button !== "left") return;
+    const b = e.bounds;
+    const inside = b && e.local_position.x >= 0 && e.local_position.y >= 0 &&
+      e.local_position.x <= b.width && e.local_position.y <= b.height;
+    if (!inside) return;
+    const src = spaces()[this.pressed];
+    if (!src || (src.machine ?? null) !== (s.machine ?? null)) return;
+    if (this.over !== i) {
+      this.over = i;
+      this.dragged = true;
+      cx.notify();
+    }
+  }
+
+  // 松手落位:每行都收到窗口级 release,只有目标行(i === over)才处理。
+  dropOn(i, cx) {
+    if (this.pressed === null || i !== this.over) return;
+    const from = this.pressed;
+    this.pressed = null;
+    this.over = null;
+    if (from !== i) {
+      const target = spaces()[from];
+      if (target) run("space.move", { id: target.id, index: i + 1 });
+      this.dragged = true;
+    }
+    cx.notify();
   }
 
   // 一个终端的上下文占比:pi 取屏幕页脚,hermes 取会话记录;无数据返回 {}。
@@ -354,6 +429,13 @@ export default class Rail extends View {
 
   // 弹层看门狗:图标和弹层都不在悬停(宽限 300ms 过渡)才关闭。
   tipWatchdog() {
+    // 拖动排序时一律不弹悬停弹层(也不留残留)
+    if (this.pressed !== null) {
+      this.tipPending = null;
+      this.tipChipHovered = false;
+      if (this.tipId) { closeOverlay(this.tipId); this.tipId = null; }
+      return;
+    }
     if (this.tipPending) {
       if (!this.tipChipHovered) this.tipPending = null;
       else if (Date.now() - this.tipPending.at >= 100) {
@@ -379,6 +461,11 @@ export default class Rail extends View {
   // 悬停:弹整个空间的终端清单(hanfang-tip 弹层,指针处弹出)。
   // 关闭由弹层自管理:指针移入弹层则保持,离开才关;直接移开 0.7s 后自闭。
   tipHover(on, p, all) {
+    if (this.pressed !== null) { // 正在拖动:不追踪悬停,不弹
+      this.tipChipHovered = false;
+      this.tipPending = null;
+      return;
+    }
     // 延时 100ms:悬停满时限才真正弹(由看门狗兑现);提前离开则取消
     this.tipChipHovered = on;
     this.tipPending = on ? { p, all, at: Date.now() } : null;
@@ -510,12 +597,12 @@ export default class Rail extends View {
       .cursor_pointer()
       .text_color(t.dim)
       .hover((st) => st.bg(t.hover).text_color(t.foreground))
-      .tooltip("新建标签页")
+      .when(this.pressed === null, (el) => el.tooltip("新建标签页"))
       .on_click(() => run("tab.new", { space: s.id }))
       .child(div().text_size(13).child("+"));
   }
 
-  chips(s, t) {
+  chips(s, t, i) {
     // 按标签页分组:一个 tab 内的多个窗格(拆分)框进同一个背景框,表示是一起的。
     const groups = (s.tabs ?? [])
       .map((tab) => panes().filter((p) => p.tab === tab.id && p.terminal))
@@ -536,16 +623,23 @@ export default class Rail extends View {
         .items_center()
         .children(cells);
     };
-    return h_flex()
+    const chips = h_flex()
       .id(`rail-chips-${s.id}`)
+      .relative()
       .flex_wrap()
       .gap(4)
       .pl(14)
       .pr(8)
       .pb(5)
       .flex_none()
+      .on_window_mouse_move((e, cx) => this.dragOver(i, s, e, cx))
+      .on_window_mouse_up("left", (_e, cx) => this.dropOn(i, cx))
       .children(groups.map(part))
       .child(this.plusChip(s, t));
+    // 落点指示线(往下拖):画在本空间终端清单的下方——插到空间行与它自己的终端图标
+    // 之间是错的,整个空间(行 + 终端)作为一个整体移动。
+    if (this.pressed !== null && this.over === i && this.pressed < i) chips.child(dropLine(t, false));
+    return chips;
   }
 
   // 机器分组头(参照 orca 的分隔方式):机器之间一条 1px 规则线(首台无),
@@ -572,7 +666,7 @@ export default class Rail extends View {
       .rounded(7)
       .cursor_pointer()
       .hover((s) => s.bg(t.hover))
-      .tooltip(dead ? (st?.error ? `${m} 无法连接:${st.error}` : `${m} 无法连接`) : folded ? "展开分组" : "折叠分组")
+      .when(this.pressed === null, (el) => el.tooltip(dead ? (st?.error ? `${m} 无法连接:${st.error}` : `${m} 无法连接`) : folded ? "展开分组" : "折叠分组"))
       .on_click((_e, cx) => {
         if (!this.foldedMachines.delete(key)) this.foldedMachines.add(key);
         localStorage.setItem("rail.machines.folded", JSON.stringify([...this.foldedMachines]));
@@ -617,7 +711,7 @@ export default class Rail extends View {
           .rounded(3)
           .flex_none()
           .bg(dead ? t.dim : t.ansi2)
-          .tooltip(dead ? (st?.busy ? "重连中" : "未连接") : "已连接"),
+          .when(this.pressed === null, (el) => el.tooltip(dead ? (st?.busy ? "重连中" : "未连接") : "已连接")),
       );
     // 机器间一条规则线;首台之前没有。
     return v_flex()
@@ -662,7 +756,7 @@ export default class Rail extends View {
       .cursor_pointer()
       .text_color(t.dim)
       .hover((st) => st.bg(t.hover).text_color(t.foreground))
-      .tooltip("新建空间")
+      .when(this.pressed === null, (el) => el.tooltip("新建空间"))
       .on_click(() => run("space.new"))
       .child(div().text_size(14).child("+"));
   }
@@ -696,7 +790,7 @@ export default class Rail extends View {
                   .px(4)
                   .cursor_pointer()
                   .hover((st) => st.bg(t.hover))
-                  .tooltip("所有空间的 agent 总数 · 点击跳到下一个")
+                  .when(this.pressed === null, (el) => el.tooltip("所有空间的 agent 总数 · 点击跳到下一个"))
                   .on_click(() => run("agent.next"))
                   .child(div().text_color(t.muted).child("Agents"))
                   .child(div().text_color(t.foreground).child(String(n))),
@@ -733,8 +827,8 @@ export default class Rail extends View {
         first = false;
       }
       if (this.foldedMachines.has(m ?? "__local__")) continue; // 折叠:跳过该机空间
-      out.push(this.spaceRow(s, t));
-      out.push(this.chips(s, t));
+      out.push(this.spaceRow(s, t, i));
+      out.push(this.chips(s, t, i));
     }
     // 注册了但当前没有 space 挂靠的断连机器(其 space 被并入本机组):尾部补灰态分组头。
     for (const [name, layout] of mstate) {

@@ -3,7 +3,7 @@
 
 import { View, div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, Scrollbar } from "gpui-base";
-import { run, props, closeOverlay, theme, spaces, panes, exec, home, appHome, readTextFile } from "herdr";
+import { run, props, closeOverlay, theme, spaces, panes, exec, home, appHome, readTextFile, pickFolder } from "herdr";
 
 // Where a space is now: its first terminal's live folder, else where it was made.
 function place(s, all = panes()) {
@@ -154,14 +154,7 @@ export default class Worktree extends View {
         if (!this.opening && props()?.action !== "remove") this.root = await root(this.userHome);
         this.folder = props()?.folder || place(this.space()) || this.userHome;
         // The repo is set last: Enter does nothing until the warnings it consents to are known.
-        const repo = await repoOf(this.folder, this.on);
-        if (repo && props().action === "remove") {
-          this.dirty = (await git(repo.top, ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain"], this.on)).out !== "";
-          this.unpushed = (await submodules(repo.top, this.on)).unpushed;
-        }
-        if (repo && this.opening) this.list = await checkouts(repo, this.on);
-        this.repo = repo;
-        cx.notify();
+        await this.load(cx);
         // The list (and with it the filter input) only mounts once loading is
         // done, so the keyboard must move there now — a focus call made while
         // loading lands on nothing and the dialog stays keyboard-dead.
@@ -179,6 +172,55 @@ export default class Worktree extends View {
 
   close() {
     closeOverlay(props().overlay);
+  }
+
+  // Read the repo that this.folder belongs to: what the dialog warns about, and
+  // (opening) the checkouts to pick from. A folder that moved needs this again.
+  async load(cx) {
+    this.repo = undefined;
+    this.list = undefined;
+    this.dirty = false;
+    this.unpushed = [];
+    const repo = await repoOf(this.folder, this.on);
+    if (repo && props()?.action === "remove") {
+      this.dirty = (await git(repo.top, ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain"], this.on)).out !== "";
+      this.unpushed = (await submodules(repo.top, this.on)).unpushed;
+    }
+    if (repo && this.opening) this.list = await checkouts(repo, this.on);
+    this.repo = repo;
+    cx.notify();
+  }
+
+  // The system's folder picker: another repo of this machine, when the space's
+  // own folder is not one (or is the wrong one). Remote spaces keep the exec path.
+  browse(cx) {
+    if (this.busy || this.on) return;
+    cx.spawn(async (cx) => {
+      let folder = null;
+      try { folder = await pickFolder({ prompt: "选择文件夹" }); }
+      catch (error) { this.error = String(error); cx.notify(); return; }
+      if (!folder) return;
+      this.folder = folder;
+      this.error = "";
+      try { await this.load(cx); }
+      catch (error) { this.repo = null; this.error = String(error); cx.notify(); }
+    });
+  }
+
+  // "选择文件夹…" — only where a folder can still be chosen.
+  pickButton(t) {
+    return div()
+      .px(10)
+      .h(26)
+      .items_center()
+      .rounded(6)
+      .border(1)
+      .border_color(t.input)
+      .text_size(12)
+      .text_color(t.foreground)
+      .hover((s) => s.bg(t.hover))
+      .on_click((_e, cx) => this.browse(cx))
+      .child("选择文件夹…");
   }
 
   go(cx) {
@@ -300,7 +342,11 @@ export default class Worktree extends View {
       .text_size(13)
       .child(h_flex().child(div().flex_1().font_semibold().text_color(t.foreground).child(`打开工作树${r ? `（${r.name}）` : ""}`)).child(div().text_size(11).text_color(t.dim).child(r ? count : "")))
       .when(r === undefined || (r && this.list === undefined), (el) => el.child(div().text_color(t.muted).child("\u2026")))
-      .when(r === null, (el) => el.child(div().text_color(t.muted).child(`${this.folder ? tilde(this.folder, this.userHome ?? "") : "此文件夹"}不在 git 仓库中。`)))
+      .when(r === null, (el) =>
+        el
+          .child(div().text_color(t.muted).child(`${this.folder ? tilde(this.folder, this.userHome ?? "") : "此文件夹"}不在 git 仓库中。`))
+          .when(!this.on, (e) => e.child(h_flex().child(this.pickButton(t)))),
+      )
       .when(Boolean(r && this.list), (el) =>
         el
           .child(Input.new(this.input).h(32).px(10).items_center().rounded(6).border(1).border_color(this.inputFocused ? t.accent : t.input).bg(t.background).text_color(t.foreground))
@@ -352,6 +398,7 @@ export default class Worktree extends View {
       .text_size(13)
       .child(div().font_semibold().text_color(t.foreground).child(title))
       .child(div().text_color(t.muted).child(detail))
+      .when(r === null && !this.on, (el) => el.child(h_flex().child(this.pickButton(t))))
       .when(remove && this.dirty, (el) => el.child(div().text_color(t.blocked).child("它有未提交的变更：将会丢失。")))
       .when(remove && this.unpushed.length > 0, (el) => el.child(div().text_color(t.blocked).child(`子模块 ${this.unpushed.join(", ")} 有未推送到任何地方的提交：将会丢失。`)))
       .when(!remove && !blocked, (el) =>
