@@ -9,7 +9,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 APP="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
 
-OWN_MODS=(hanfang-spaces hanfang-sidebar hanfang-tip files-zh machine-add-zh menu-zh new-menu-zh pane-zh picker-zh toast-zh workspace-chrome-zh workspace-status-zh worktree-zh)
+OWN_MODS=(hanfang-spaces hanfang-sidebar hanfang-tip hanfang-links files-zh machine-add-zh menu-zh new-menu-zh pane-zh picker-zh toast-zh workspace-chrome-zh workspace-status-zh worktree-zh)
 COMMUNITY_MODS=(better-sidebar better-tabs better-changes better-files branch-pr branch-issue herdr-nvim herdr-nvim-header)
 
 mkdir -p "$APP/mods" "$APP/layouts" "$APP/themes"
@@ -46,11 +46,36 @@ else
   echo "  (zh-mods-patch 未安装——如需社区面板中文: cp -R $HERE/zh-mods-patch $APP/ && $APP/zh-mods-patch/apply.sh)"
 fi
 
-echo "== 3 验收 =="
+echo "== 3 键位:⌘P 指向中文 picker =="
+KEYS="$APP/keys.json"
+if [ -f "$KEYS" ]; then
+  python3 - "$KEYS" <<'PY'
+import json, sys
+p = sys.argv[1]
+raw = open(p, encoding="utf-8").read()
+d = json.loads(raw)
+g = d.setdefault("global", {})
+want = "mod.open:picker-zh"
+cur = g.get("cmd-p")
+if cur == want:
+    print("  cmd-p 已指向 picker-zh ✅")
+elif cur in (None, "", "mod.open:picker"):
+    g["cmd-p"] = want
+    indent = 1 if raw.lstrip().startswith('{\n "') else 2
+    open(p, "w", encoding="utf-8").write(json.dumps(d, ensure_ascii=False, indent=indent) + "\n")
+    print(f"  cmd-p: {cur or '(未绑定)'} → {want} ✅")
+else:
+    print(f"  cmd-p 已被自定义为 {cur},不覆盖(要中文 picker 请手工改)")
+PY
+else
+  echo "  (还没有 keys.json:先启动一次 Herdr 生成默认键位,再重跑本步)"
+fi
+
+echo "== 4 验收 =="
 ok=0; fail=0
 for m in "${OWN_MODS[@]}" "${COMMUNITY_MODS[@]}"; do
   if herdr-app check "$APP/mods/$m" >/dev/null 2>&1; then ok=$((ok+1)); else fail=$((fail+1)); echo "  ❌ $m"; fi
 done
 echo "check: $ok/$((ok+fail)) 通过"
 herdr-app do layout.switch --name hanfang >/dev/null 2>&1 || true
-echo "完成。可选后续:第三步 zh-patch(原生界面)、第四步 hermes-bridge(见 README)、keys.json 键位合并。"
+echo "完成。可选后续:第三步 zh-patch(原生界面)、第四步 hermes-bridge(见 README)、herdr-nvim 键位(见 README)。"

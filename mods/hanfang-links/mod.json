@@ -1,0 +1,7 @@
+{
+  "place": "none",
+  "title": "链接处理",
+  "link_handlers": [
+    { "kind": "file", "pattern": "(?i)\\.(rs|ts|tsx|js|jsx|mjs|cjs|py|go|java|kt|rb|php|lua|vim|c|h|cc|cpp|hpp|cs|swift|sh|bash|zsh|fish|md|json|ya?ml|toml|ini|sql|html|css|scss|less|vue|svelte)$" }
+  ]
+}

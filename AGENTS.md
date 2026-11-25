@@ -9,7 +9,8 @@ Herdr 桌面版的中文工作台发布包:布局 `hanfang.json` + mod 全家桶
 自有件(布局、hanfang-*/-zh mod、programs.json、my-icons、主题)由 install.sh 符号
 链接进现场,改现场=改仓库,git status 即时可见,无回写问题;例外件(社区 mod、
 zh-patch/zh-mods-patch 工具目录、keys.json、hermes-bridge)仍为拷贝/合并,
-**只有这些才有"两边同步"**,改完现场记得拷回仓库。
+**只有这些才有"两边同步"**,改完现场记得拷回仓库。keys.json 由 install.sh 第 3 步
+只合并一条 `cmd-p → mod.open:picker-zh`(Herdr 默认值或缺失时才写,自定义绑定不覆盖)。
 
 ## 四层架构(改动前先定位你要动的层)
 

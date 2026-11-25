@@ -40,6 +40,15 @@ branch-*/herdr-nvim*)保持拷贝并自动跑 zh-mods-patch 字典汉化;最后�
 "cmd-shift-e": "herdr-nvim.reveal"
 ```
 
+⌘P 指向中文 picker(`"cmd-p": "mod.open:picker-zh"`)由 install.sh 第 3 步自动合并:
+已指向 `picker-zh` 时跳过,是 Herdr 默认的 `mod.open:picker` 就替换,其它自定义绑定不覆盖。
+注意 keys.json 一旦被改过就是用户自有文件,升级不再补默认键位。
+
+⌘+点击终端里的文件路径(`mods/hanfang-links`,0.1.17+ 的 link_handlers)交给 herdr-nvim,
+在**点击处所在标签页**的 nvim 里打开并跳到行号(`file.rs:42`、`:5-12`、`#L5-L12` 都取首行);
+规则只认源码类扩展名,路径为空(远程/未解析)、点击在别的机器上、或 herdr-nvim 拉不起 nvim 时
+一律交回 Herdr 原生打开方式。布局 root 的 `"link_handlers": ["hanfang-links"]` 决定顺序。
+
 运行依赖(缺失只影响对应面板):Neovim(文件面板)、
 GitHub CLI(branch-pr)、`LINEARAPIKEY` 环境变量(branch-issue)。
 
