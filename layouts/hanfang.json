@@ -26,29 +26,14 @@
           "type": "column",
           "children": [
             {
-              "id": "spaces",
+              "id": "sidebar",
               "type": "block",
-              "content": {
-                "mod": "hanfang-spaces"
-              },
               "size": {
                 "weight": 1
               },
-              "min": 90
-            },
-            {
-              "id": "agents",
-              "type": "block",
               "content": {
-                "mod": "hanfang-sidebar",
-                "props": {
-                  "view": "agents"
-                }
-              },
-              "size": {
-                "weight": 1
-              },
-              "min": 90
+                "mod": "hanfang-sidebar"
+              }
             }
           ]
         },

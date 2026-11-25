@@ -19,10 +19,9 @@ zh-patch/zh-mods-patch 工具目录、keys.json、hermes-bridge)仍为拷贝/合
 3. **zh-mods-patch 字典** — 社区 mod 英文底版 + dicts/*.json 就地替换;
    **不变量:`pristine/<mod>` + dict == 现场 mod**,任何改动后必须复核
 4. **hanfang- 自制/分叉族** — 我们自己的东西,一律 `hanfang-` 前缀:
-   - `hanfang-spaces` 侧栏轨道(空间行+终端图标横排)
+   - `hanfang-sidebar` 的轨道视图 views/rail.js(空间行+终端图标横排);侧栏只有一个 mod
    - `hanfang-sidebar` better-sidebar 的分叉(agents 视图增强)
    - `hanfang-tip` 悬停信息弹层
-   - 社区原版(better-sidebar 等)保持干净休眠,换回=改布局一行
 
 ## 硬规则
 
@@ -55,7 +54,7 @@ zh-patch/zh-mods-patch 工具目录、keys.json、hermes-bridge)仍为拷贝/合
 ## 验收清单(动过东西后)
 
 - 三个 hanfang mod:`herdr-app check` 通过、无 `*.error` 文件
-- zh-mods-patch 不变量:pristine+dict == 现场(对 better-sidebar 尤其;社区 mod 是例外件)
+- zh-mods-patch 不变量:pristine+dict == 现场(社区 mod 是例外件)
 - 符号链接健康:自有件(13 mod + 布局 + programs/my-icons/主题)链接在位、无断链
   (`ls -l ~/.config/herdr-app/mods/ | grep '\->'`);例外件现场改过需拷回仓库
 - 新环境安装/换机后:hermes-bridge 三件套在位检查(agent-hooks/herdr-status.py、

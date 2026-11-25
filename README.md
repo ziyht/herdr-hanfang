@@ -1,8 +1,8 @@
 # herdr-hanfang(汉坊)
 
 中文的 Herdr 桌面工作台:main 布局的骨架 + 社区最强 mod 组合
-(better-sidebar / better-tabs / better-changes / herdr-nvim / branch-pr /
-branch-issue / better-files)+ 自制紧凑侧栏「空间轨道」(hanfang-spaces)+
+(better-tabs / better-changes / herdr-nvim / branch-pr /
+branch-issue / better-files)+ 自制紧凑侧栏「空间轨道」(hanfang-sidebar 的轨道视图)+
 全套中文界面。基于 **Herdr 0.1.16**。
 复刻说明见 [RECIPE.md](RECIPE.md)。
 
@@ -125,7 +125,7 @@ better-* 与 branch-* 社区面板为英文原版。品牌「Herdr」、术语 a
 ## 致谢与许可
 
 - Apache-2.0,见 [LICENSE](LICENSE)、[NOTICE](NOTICE)
-- better-sidebar / better-tabs / better-changes / better-files /
+- better-tabs / better-changes / better-files /
   branch-pr / branch-issue 来自 [munza/herdr-mods](https://github.com/munza/herdr-mods)(Apache-2.0)
 - herdr-nvim / herdr-nvim-header 来自 [ChmaraX/herdr-nvim](https://github.com/ChmaraX/herdr-nvim)(MIT,header 有本地修改)
 - `mods/*-zh` 与 `zh-patch/` 基于 Herdr 自带 mod 与 frame 源码翻译;

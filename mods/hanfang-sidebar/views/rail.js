@@ -4,7 +4,7 @@
 import { div, svg, image, View } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
 import { spaces, machines, panes, agents, terminals, run, openOverlay, closeOverlay, theme, settings, shared, setShared, hc, readTextFile, home, exec, playSound } from "herdr";
-import { PRStatusObserver, prPlaceKey, prAppearance } from "./git/pr-status.js";
+import { PRStatusObserver, prPlaceKey, prAppearance } from "../git/pr-status.js";
 
 const TEXT = { caption: 11, label: 12.8 };
 
@@ -173,7 +173,7 @@ export default class Rail extends View {
           .text_color(st.color)
           .when(this.pressed === null, (el) => el.tooltip(`${pr.repository}#${pr.number} · ${st.label}\n${pr.title}`))
           .on_click(() => exec("open", [pr.url]).catch(() => {}))
-          .child(svg(`mods/hanfang-spaces/icons/${st.icon}.svg`).size(12).flex_none().text_color(st.color)),
+          .child(svg(`mods/hanfang-sidebar/icons/${st.icon}.svg`).size(12).flex_none().text_color(st.color)),
       )
       .when(
         prs.length > 1,
@@ -726,9 +726,9 @@ export default class Rail extends View {
         localStorage.setItem("rail.machines.folded", JSON.stringify([...this.foldedMachines]));
         cx.notify();
       })
-      .child(svg(`mods/hanfang-spaces/icons/chevron-${folded ? "right" : "down"}.svg`).size(12).flex_none().text_color(t.dim))
+      .child(svg(`mods/hanfang-sidebar/icons/chevron-${folded ? "right" : "down"}.svg`).size(12).flex_none().text_color(t.dim))
       .child(
-        svg(isLocal ? "mods/hanfang-spaces/icons/monitor.svg" : "mods/hanfang-spaces/icons/server.svg")
+        svg(isLocal ? "mods/hanfang-sidebar/icons/monitor.svg" : "mods/hanfang-sidebar/icons/server.svg")
           .size(13)
           .flex_none()
           .text_color(dead ? t.dim : t.muted),

@@ -384,9 +384,10 @@ export class Agents {
     return v_flex()
       .size_full()
       .min_h(0)
-      .bg(t.chrome)
-      // Under the lists view's tabs, the tab bar's space divides it instead.
-      .when(opts.heading !== false, (el) => el.border_t(1).border_color(t.border))
+      .bg(opts.background ?? t.chrome)
+      // Under the lists view's tabs, the tab bar's space divides it instead;
+      // composed under hanfang-sidebar's draggable divider, that divider is the line.
+      .when(opts.heading !== false && opts.topBorder !== false, (el) => el.border_t(1).border_color(t.border))
       .text_size(TEXT.body)
       .when(!view.collapsed && opts.heading !== false, (el) => el.child(this.heading(view.sort, t)))
       .when(view.list.length === 0 && !view.collapsed, (el) => el.child(this.emptyMessage(t)))
@@ -547,9 +548,9 @@ export class Agents {
   heading(sort, t) {
     return h_flex()
       .px(16)
-      .h(41)
-      .pt(14)
-      .pb(5)
+      .h(30)
+      .pt(4)
+      .pb(2)
       .flex_none()
       .items_center()
       .justify_between()

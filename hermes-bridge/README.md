@@ -7,7 +7,7 @@
 
 Herdr 通过终端的 OSC 7501 转义序列识别 agent;hermes 侧用 shell hooks
 在关键事件上把状态与用量写到 `~/.hermes/herdr-status/`,由汉坊的
-`hanfang-spaces` / `hanfang-sidebar` 读取展示。六个事件:
+`hanfang-sidebar`(轨道视图与 Agents 视图)读取展示。六个事件:
 
 | 事件 | 写入状态 |
 |---|---|

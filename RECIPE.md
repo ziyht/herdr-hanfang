@@ -9,7 +9,7 @@
 ## 你会看到什么
 
 - 左侧 268px 侧栏:顶部品牌行(中文「设置」「添加机器」),
-  空间列表用自制的「空间轨道」(hanfang-spaces)——每个空间一行,
+  空间列表用自制的「空间轨道」(hanfang-sidebar 的 rail 视图)——每个空间一行,
   名下终端只画图标、横向换行排列,图标颜色跟随 agent 状态,
   悬停显示终端名,右键弹菜单(关闭、重命名标签页、分屏…);
   agent 列表由 hanfang-sidebar 接管(基于 better-sidebar 的汉坊分叉)(分组、置顶、按状态排序)
@@ -41,23 +41,22 @@
   herdr-nvim-header 表头 / panel 300 stack: herdr-nvim · better-changes ·
   branch-pr · branch-issue · better-files) / status 28 → workspace-status-zh)];
   根字段 toast=toast-zh、terminal_menu=menu-zh、floating herdr-nvim-sync
-- 自制 mod:hanfang-spaces「空间轨道」(紧凑侧栏,空间行 + 终端图标横排、
+- 自制视图:hanfang-sidebar/views/rail.js「空间轨道」(紧凑侧栏,空间行 + 终端图标横排、
   拆分窗格分组框、悬停弹整空间终端清单[hanfang-tip 弹层,等宽字体随 UI
   配置、状态与 token 用量分色、100ms 延时])
 - hanfang-sidebar:better-sidebar 的汉坊分叉(agents 视图)——图标状态色、
-  hermes 会话状态覆盖、token 进度条;原版 better-sidebar 干净休眠,换回
-  只需改布局一行
+  hermes 会话状态覆盖、token 进度条;  只需改布局一行
 - hermes-bridge/(可选):hermes 侧状态桥,六个 shell hook 事件 +
   OSC 7501 自报,详见其 README
 - 中文 mod(9 个,-zh 家族,基于 0.1.16 源码翻译):workspace-chrome-zh、
   workspace-status-zh、menu-zh、toast-zh、machine-add-zh、picker-zh、
   worktree-zh、pane-zh、files-zh(供 herdr-nvim 还原原面板)
-- 社区 mod(8 个,英文原版打包):better-sidebar / better-tabs / better-changes /
+- 社区 mod(7 个,英文原版打包):better-tabs / better-changes /
   better-files(munza/herdr-mods,Apache-2.0)、branch-pr(munza,需 GitHub CLI)、
   branch-issue(munza,需 LINEARAPIKEY 环境变量)、
   herdr-nvim / herdr-nvim-header(ChmaraX/herdr-nvim,MIT;header 已改为引用 pane-zh)
 - `zh-mods-patch/`(社区面板中文化):字典式就地翻译引擎 + 6 个字典
-  (better-sidebar 47 / better-tabs 15 / better-changes 62 / herdr-nvim 82 /
+  (better-tabs 15 / better-changes 62 / herdr-nvim 82 /
   branch-pr 149 / branch-issue 105 条,共约 460 条译文)。社区 mod 是用户文件,
   保存即热重载,无需重启;发给 agent 的 prompt 刻意保留英文(对 LLM 更稳)
 - 可选键位(合并进 keys.json 的 global 段):

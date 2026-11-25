@@ -9,8 +9,8 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 APP="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
 
-OWN_MODS=(hanfang-spaces hanfang-sidebar hanfang-tip hanfang-links files-zh machine-add-zh menu-zh new-menu-zh pane-zh picker-zh toast-zh workspace-chrome-zh workspace-status-zh worktree-zh)
-COMMUNITY_MODS=(better-sidebar better-tabs better-changes better-files branch-pr branch-issue herdr-nvim herdr-nvim-header)
+OWN_MODS=(hanfang-sidebar hanfang-tip hanfang-links files-zh machine-add-zh menu-zh new-menu-zh pane-zh picker-zh toast-zh workspace-chrome-zh workspace-status-zh worktree-zh)
+COMMUNITY_MODS=(better-tabs better-changes better-files branch-pr branch-issue herdr-nvim herdr-nvim-header)
 
 mkdir -p "$APP/mods" "$APP/layouts" "$APP/themes"
 
