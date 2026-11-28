@@ -6,7 +6,7 @@
 ## 原理
 
 Herdr 通过终端的 OSC 7501 转义序列识别 agent;hermes 侧用 shell hooks
-在关键事件上把状态与用量写到 `~/.hermes/herdr-status/`,由汉坊的
+在关键事件上把状态与用量写到 `~/.hermes/herdr-status/term/`,由汉坊的
 `hanfang-sidebar`(轨道视图与 Agents 视图)读取展示。六个事件:
 
 | 事件 | 写入状态 |
@@ -17,6 +17,30 @@ Herdr 通过终端的 OSC 7501 转义序列识别 agent;hermes 侧用 shell hook
 | on_human_input_resolved | working(用户已响应) |
 | on_session_end | done/idle/error(会话关闭) |
 | pre_api_request | 上下文 token 数 + 模型(不表态) |
+
+**按终端键直查,不猜窗格**:hermes 跑在 Herdr 终端里时,环境变量
+`HC_TERMINAL_ID` 就是该窗格的终端 id,hook 以它为键写
+`term/<HC_TERMINAL_ID>.json`(id 里的 `/` 换成 `_`,其余原样);UI 拿
+`pane.terminal` 直接拼文件名读,没有 cwd 匹配、没有时效推断、没有汇总表。
+
+没有 `HC_TERMINAL_ID` 的会话(gateway 后台会话、cron、桌面 App、子 agent)
+不属于任何窗格,**不落任何文件**——物理隔离,不会串到别的窗格。
+
+记录字段(JSON 对象):
+
+| 字段 | 含义 |
+|---|---|
+| state | working / done / blocked / idle / error |
+| session_id | hermes 会话 id(UI 靠它判断状态跳变,决定是否提示音) |
+| ts | 最后写入时间(unix 秒) |
+| context_tokens | 上下文 token 数,仅 pre_api_request 写入(可缺) |
+| model | 模型名,仅 pre_api_request 写入(可缺) |
+
+写入是**增量合并**:只覆盖本事件带来的字段,其余保留(所以 context_tokens /
+model 整轮都在);tmp + `os.replace` 原子替换,UI 不会读到半截文件。
+`on_session_end` 直接删除该终端的记录;每次写入顺带清扫 `term/` 下 7 天
+没更新的记录,用 `.gc` marker 的 mtime 节流到每小时最多一次。
+根目录不再放会话 json 和 `_latest.json`,残留的旧格式由 hook 运行时清掉。
 
 ## 安装
 
@@ -46,6 +70,7 @@ fi
 
 ## 已知边界
 
-- 桌面 App / 无终端的 hermes 会话没有面板,不在侧栏显示
-- 同一目录跑两个 hermes 会话时,状态按最新活动匹配,可能串
+- 桌面 App / 无终端的 hermes 会话没有面板,不在侧栏显示(也不落盘,物理隔离)
+- 同一目录跑两个 hermes 会话互不影响:状态按终端键精确查,不再按 cwd 匹配
 - 子 agent(无窗格)不参与状态覆盖与进度条
+- 远端机器的 hermes 窗格读不到记录(状态文件只写在本机 home;与旧实现范围相同)

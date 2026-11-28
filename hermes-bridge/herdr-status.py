@@ -1,12 +1,13 @@
 #!/usr/bin/python3
-"""Herdr 集成桥:hermes hook 事件 → 终端 OSC 7501 状态上报 + 用量落盘。
+"""Herdr 集成桥:hermes hook 事件 → 终端 OSC 7501 状态上报 + 按终端键落盘。
 
 - stdin 收 hermes 的 hook JSON(观察型 hook,无输出、不阻塞、不改内容)
 - 往 /dev/tty 写 OSC 7501,让 Herdr 把本会话识别为 agent(图标/状态/Agents 统计);
   非终端环境(gateway 等)写失败则静默跳过
-- ~/.hermes/herdr-status/<session>.json 供 spaces-rail-zh 读取:
-  {state, cwd, session_id, ts, context_tokens?, model?}
-- 同目录 _latest.json 汇总全部活跃记录(按时间倒序,供 mod 一次读取)
+- 有 HC_TERMINAL_ID 时写 ~/.hermes/herdr-status/term/<终端 id>.json:
+  {state, session_id, ts, context_tokens?, model?}——UI 按窗格终端 id 直查,
+  不用 cwd 猜窗格
+- 无 HC_TERMINAL_ID(gateway / cron / desktop / 子 agent)不落盘,物理隔离
 """
 import json
 import os
@@ -14,8 +15,11 @@ import sys
 import time
 
 STATUS_DIR = os.path.expanduser("~/.hermes/herdr-status")
-MAX_FILES = 60      # 汇总上限,超出只保留最新
-STALE_SEC = 86400   # 单条记录超过一天未更新即从汇总剔除
+TERM_DIR = os.path.join(STATUS_DIR, "term")
+GC_MARKER = os.path.join(TERM_DIR, ".gc")            # 清扫节流 marker(mtime 计时)
+LEGACY_MARKER = os.path.join(STATUS_DIR, ".legacy-cleaned")  # 旧格式清理节流 marker
+GC_INTERVAL_SEC = 3600        # 清扫最多一小时一次,避免每个事件都扫目录
+TERM_TTL_SEC = 7 * 86400      # 终端记录 7 天没更新即视为死窗格
 
 EVENTS = (
     "pre_llm_call",
@@ -47,22 +51,6 @@ def is_internal_turn(payload) -> bool:
 
 # on_human_input_request 的 kind → OSC 7501 的 blocked kind
 HUMAN_KINDS = {"clarify": "question", "approval": "permission", "sudo": "auth"}
-
-
-def session_cwd(session_id):
-    """会话的真实工作目录(state.db 的 sessions.cwd);查不到返回 None。"""
-    try:
-        import sqlite3
-
-        db = os.path.expanduser("~/.hermes/state.db")
-        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=2)
-        try:
-            row = con.execute("SELECT cwd FROM sessions WHERE id = ?", (session_id,)).fetchone()
-        finally:
-            con.close()
-        return row[0] if row and row[0] else None
-    except Exception:
-        return None
 
 
 def state_of(event, payload):
@@ -100,10 +88,125 @@ def state_of(event, payload):
     return None
 
 
+def term_key():
+    """HC_TERMINAL_ID → 记录文件名;无终端环境返回 None(不落盘)。
+
+    `/` 换成 `_`:id 要直接当文件名用。
+    """
+    tid = (os.environ.get("HC_TERMINAL_ID") or "").strip()
+    if not tid:
+        return None
+    return tid.replace("/", "_")
+
+
+def as_int(v):
+    """context_tokens 只要整数;非法值当缺省。"""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, int):
+        return v
+    try:
+        return int(float(v))
+    except (TypeError, ValueError):
+        return None
+
+
+def write_term(key, rec):
+    """增量合并 + tmp/os.replace 原子写:保留其它事件写入的字段。"""
+    os.makedirs(TERM_DIR, exist_ok=True)
+    out = os.path.join(TERM_DIR, key + ".json")
+    merged = {}
+    try:
+        with open(out, encoding="utf-8") as f:
+            loaded = json.load(f)
+        if isinstance(loaded, dict):
+            merged = loaded
+    except (OSError, ValueError):
+        pass
+    # 同一窗格换了会话(上个会话没走 on_session_end):旧会话的用量字段作废
+    if merged.get("session_id") not in (None, rec.get("session_id")):
+        merged = {}
+    merged.update(rec)
+    tmp = os.path.join(TERM_DIR, "." + key + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(merged, f, ensure_ascii=False)
+    os.replace(tmp, out)
+
+
+def remove_term(key):
+    """on_session_end:窗格记录随会话消失。"""
+    try:
+        os.unlink(os.path.join(TERM_DIR, key + ".json"))
+    except OSError:
+        pass
+
+
+def maybe_gc(now):
+    """稀疏清扫:删 term/ 下 mtime 超 7 天的记录。
+
+    用 .gc marker 的 mtime 节流到 ≥1 小时一次,不给每个事件加目录扫描开销。
+    """
+    try:
+        if now - os.path.getmtime(GC_MARKER) < GC_INTERVAL_SEC:
+            return
+    except OSError:
+        pass
+    cutoff = now - TERM_TTL_SEC
+    try:
+        with os.scandir(TERM_DIR) as entries:
+            for ent in entries:
+                if not ent.name.endswith(".json"):
+                    continue
+                try:
+                    if ent.stat().st_mtime < cutoff:
+                        os.unlink(ent.path)
+                except OSError:
+                    continue
+    except OSError:
+        return
+    try:
+        with open(GC_MARKER, "w", encoding="utf-8") as f:
+            f.write(str(int(now)))
+    except OSError:
+        pass
+
+
+def sweep_legacy(now):
+    """清掉根下旧格式(会话 json 与 _latest.json)。
+
+    v2 起根下不再放记录;旧文件会让老 mod 读到过期状态。
+    用 marker 的 mtime 节流到 ≥1 小时一次:旧版 hook 若还在跑(装机前并存),
+    它每回合都会重新写根下文件,单次清理会漏;节流保证既扫得到又不每事件扫目录。
+    """
+    try:
+        if now - os.path.getmtime(LEGACY_MARKER) < GC_INTERVAL_SEC:
+            return
+    except OSError:
+        pass
+    try:
+        with os.scandir(STATUS_DIR) as entries:
+            for ent in entries:
+                if not (ent.is_file() and ent.name.endswith(".json")):
+                    continue
+                try:
+                    os.unlink(ent.path)
+                except OSError:
+                    continue
+    except OSError:
+        return
+    try:
+        with open(LEGACY_MARKER, "w", encoding="utf-8") as f:
+            f.write(str(int(now)))
+    except OSError:
+        pass
+
+
 def main():
     try:
         payload = json.load(sys.stdin)
     except Exception:
+        return
+    if not isinstance(payload, dict):
         return
     event = payload.get("hook_event_name") or payload.get("event") or ""
     if event not in EVENTS:
@@ -114,47 +217,39 @@ def main():
     extra = payload.get("extra") or {}
     fields = {**payload, **extra}
     session = str(payload.get("session_id") or "unknown")
-    cwd = payload.get("cwd") or os.getcwd()
     state = state_of(event, fields)
 
-    # 只有真的判定出状态才覆盖,否则保留上一次(增量合并)
-    rec = {"cwd": cwd, "session_id": session, "ts": int(time.time())}
-    if state:
-        rec["state"] = state
-    # Herdr 终端环境自带 HC_TERMINAL_ID,记录之供 mod 精确匹配(非 Herdr 环境无此项)
-    if os.environ.get("HC_TERMINAL_ID"):
-        rec["terminal"] = os.environ["HC_TERMINAL_ID"]
-    # 会话真实 cwd:mod 按 pane.cwd 与它对应(gateway 会话的 payload cwd 不可用)
-    scwd = session_cwd(session)
-    if scwd:
-        rec["session_cwd"] = scwd
-    if event == "pre_api_request":
-        rec["context_tokens"] = extra.get("approx_input_tokens", payload.get("approx_input_tokens"))
-        rec["model"] = extra.get("model") or payload.get("model")
+    now = int(time.time())
+    sweep_legacy(now)
 
-    try:
-        os.makedirs(STATUS_DIR, exist_ok=True)
-        out = os.path.join(STATUS_DIR, session + ".json")
-        # 增量合并:保留其它事件写入的字段(如 context_tokens),只更新本事件带来的
-        merged = {}
-        try:
-            with open(out, encoding="utf-8") as f:
-                merged = json.load(f)
-        except (OSError, ValueError):
-            pass
-        merged.update(rec)
-        tmp = os.path.join(STATUS_DIR, "." + session + ".tmp")
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(merged, f, ensure_ascii=False)
-        os.replace(tmp, out)
-        rebuild_latest()
-    except OSError:
-        pass
+    key = term_key()
+    if key:
+        if event == "on_session_end":
+            remove_term(key)
+        else:
+            # 只有真的判定出状态才覆盖,否则保留上一次(增量合并)
+            rec = {"session_id": session, "ts": now}
+            if state:
+                rec["state"] = state
+            if event == "pre_api_request":
+                tokens = as_int(
+                    extra.get("approx_input_tokens", payload.get("approx_input_tokens"))
+                )
+                if tokens is not None:
+                    rec["context_tokens"] = tokens
+                model = extra.get("model") or payload.get("model")
+                if model:
+                    rec["model"] = str(model)
+            try:
+                write_term(key, rec)
+                maybe_gc(now)
+            except OSError:
+                pass
 
     if state:
         seq = "\x1b]7501;state=" + state
         if state == "blocked":
-            k = payload.get("kind") or (payload.get("extra") or {}).get("kind")
+            k = str(payload.get("kind") or (payload.get("extra") or {}).get("kind") or "")
             seq += ":kind=" + HUMAN_KINDS.get(k, "question")
         seq += ":app=hermes\x1b\\"
 
@@ -163,28 +258,6 @@ def main():
                 tty.write(seq)
         except OSError:
             pass
-
-
-def rebuild_latest():
-    """汇总所有未过期记录到 _latest.json(时间倒序)。"""
-    now = time.time()
-    recs = []
-    for name in os.listdir(STATUS_DIR):
-        if not name.endswith(".json") or name.startswith(".") or name == "_latest.json":
-            continue
-        path = os.path.join(STATUS_DIR, name)
-        try:
-            if now - os.path.getmtime(path) > STALE_SEC:
-                continue
-            with open(path, encoding="utf-8") as f:
-                recs.append(json.load(f))
-        except (OSError, ValueError):
-            continue
-    recs.sort(key=lambda r: r.get("ts", 0), reverse=True)
-    tmp = os.path.join(STATUS_DIR, "._latest.tmp")
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(recs[:MAX_FILES], f, ensure_ascii=False)
-    os.replace(tmp, os.path.join(STATUS_DIR, "_latest.json"))
 
 
 if __name__ == "__main__":
