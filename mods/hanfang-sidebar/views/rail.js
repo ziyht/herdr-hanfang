@@ -51,6 +51,10 @@ function isHermes(p) {
   return p.app === "hermes" || p.program?.key === "hermes";
 }
 
+// 终端名 → 状态文件名:hook 侧落盘时把 / 换成 _(见 hermes-bridge/herdr-status.py),
+// 远端窗格的终端名形如 "vps/t7",这边必须同样处理才能对上。
+const termKey = (term) => String(term).replace(/\//g, "_");
+
 // hermes 会话状态词 → Herdr 状态槽(error 归入 idle,不虚报 blocked);
 // 面板 OSC 只在启动时报一次 idle,非 working 状态一律以会话记录为准。
 const HERMES_STATE = { working: "working", done: "done", idle: "idle", error: "idle", blocked: "blocked" };
@@ -123,12 +127,12 @@ export default class Rail extends View {
     this.polling = false;
     this.pollContext(cx);
     cx.timer.every(5000, (cx) => this.pollContext(cx));
-    // hermes 的上下文占比:读 ~/.hermes/herdr-status/_latest.json
-    // (agent-hooks/herdr-status.py 在 pre_api_request 时写入;优先按 HC_TERMINAL_ID
-    // 精确匹配终端,cwd 兜底)。
-    this.hermesRecs = []; // [{terminal?, cwd, context_tokens, model, ts}]
+    // hermes 会话状态:窗格按终端名直读 ~/.hermes/herdr-status/term/<terminal>.json
+    // (agent-hooks/herdr-status.py 按 HC_TERMINAL_ID 落盘,终端本身就是身份,不用匹配)。
+    this.termRecs = {}; // terminal -> {session_id, state, context_tokens, model, ts}
+    this.termPolling = false;
     this.pollHermes(cx);
-    cx.timer.every(3000, (cx) => this.pollHermes(cx));
+    cx.timer.every(1000, (cx) => this.pollHermes(cx));
     // 终端清单弹层:悬停状态驱动(看门狗负责关闭)
     this.tipChipHovered = false;
     this.tipBothLeftAt = 0;
@@ -186,58 +190,66 @@ export default class Rail extends View {
       );
   }
 
+  // 每 1s:对每个 hermes 窗格读它自己终端名的状态文件。文件不存在(会话还没写过、
+  // 或 on_session_end 刚删掉)就当我没记录,不猜、不兜底。
   pollHermes(cx) {
+    if (this.termPolling) return; // 上一轮还没读完,别叠(cx.spawn 不排队)
+    this.termPolling = true;
     cx.spawn(async (cx) => {
-      let next = [];
       try {
-        const raw = await readTextFile(`${home()}/.hermes/herdr-status/_latest.json`);
-        for (const r of JSON.parse(raw ?? "[]")) {
-          if (typeof r?.context_tokens !== "number") continue;
-          next.push({
-            session_id: r.session_id ?? null,
-            terminal: r.terminal ?? null,
-            session_cwd: r.session_cwd ?? null,
-            state: r.state ?? null,
-            context_tokens: r.context_tokens,
-            model: r.model ?? null,
-            ts: r.ts ?? 0,
-          });
+        const next = {};
+        for (const p of panes()) {
+          if (!p.terminal || !isHermes(p)) continue;
+          let rec = null;
+          try {
+            const raw = await readTextFile(`${home()}/.hermes/herdr-status/term/${termKey(p.terminal)}.json`);
+            if (raw) rec = JSON.parse(raw);
+          } catch {
+            /* 缺文件/正在原子替换:本轮跳过该窗格 */
+          }
+          if (!rec || typeof rec !== "object") continue;
+          next[p.terminal] = {
+            session_id: rec.session_id ?? null,
+            state: rec.state ?? null,
+            context_tokens: typeof rec.context_tokens === "number" ? rec.context_tokens : null,
+            model: rec.model ?? null,
+            ts: rec.ts ?? 0,
+          };
         }
-      } catch {
-        /* 文件还没生成或暂不可读:保持上次结果 */
-      }
-      if (JSON.stringify(next) !== JSON.stringify(this.hermesRecs)) {
-        this.soundHermes(this.hermesRecs, next);
-        this.hermesRecs = next;
+        const sig = JSON.stringify(next);
+        if (sig === JSON.stringify(this.termRecs)) return;
+        this.soundHermes(this.termRecs, next);
+        this.termRecs = next;
+        // 发布给 Agents 侧栏(同一个 sidebar 实例):它按窗格终端查同一份数据。
+        setShared("hanfang.term", next);
         cx.notify();
+      } finally {
+        this.termPolling = false; // 中途抛错也别把轮询焊死
       }
     });
   }
 
-  // 状态跳变提示音:working → done/blocked 且没盯着那个终端 → 播放
-  // (对齐 Herdr 原生 sounds 的"没在看才响"语义)。
+  // 状态跳变提示音:同一会话 working → done/blocked 且没盯着那个终端 → 播放
+  // (对齐 Herdr 原生 sounds 的"没在看才响"语义)。按 session_id 比,不看终端,
+  // 这样会话中途换窗格也不会漏响;从没见过的会话(刚启动)不算跳变。
   soundHermes(prev, next) {
-    const prevBy = new Map(prev.map((r) => [r.session_id, r.state]));
-    for (const r of next) {
-      if (!r.session_id || prevBy.get(r.session_id) === r.state) continue;
+    const prevState = new Map();
+    for (const r of Object.values(prev ?? {})) {
+      if (r?.session_id) prevState.set(r.session_id, r.state);
+    }
+    const live = new Map(panes().filter((p) => p.terminal).map((p) => [p.terminal, p]));
+    for (const [term, r] of Object.entries(next)) {
+      const was = r.session_id ? prevState.get(r.session_id) : undefined;
+      if (was === undefined || was === r.state) continue;
       if (r.state !== "done" && r.state !== "blocked") continue;
-      const pane = panes().find((p) => p.cwd && p.cwd === r.session_cwd);
-      if (pane?.focused) continue;
+      if (live.get(term)?.focused) continue;
       playSound(r.state);
     }
   }
 
-  // 一个终端对应的 hermes 会话记录:先按终端地址精确匹配,再按会话真实 cwd
-  // (session_cwd,来自 state.db)兜底——gateway 会话只能用后者。
+  // 一个窗格的 hermes 记录:终端名直查。没有就是没有——不再按 cwd 猜、不看时效、不排序。
   hermesRec(p) {
-    const byTerm = this.hermesRecs.find((r) => r.terminal && r.terminal === p.terminal);
-    if (byTerm) return byTerm;
-    const now = Math.floor(Date.now() / 1000);
-    return (
-      this.hermesRecs
-        .filter((r) => r.session_cwd && r.session_cwd === p.cwd && now - r.ts < 900)
-        .sort((a, b) => b.ts - a.ts)[0] ?? null
-    );
+    return this.termRecs[p.terminal] ?? null;
   }
 
   pollContext(cx) {
@@ -475,7 +487,8 @@ export default class Rail extends View {
     const screen = this.hermesScreen?.[q.terminal];
     if (screen) return { pct: screen.pct, detail: `上下文 ${screen.used}/${screen.limit} tok(${screen.pct}%)`, tokens: `${k(screen.used)}/${k(screen.limit)}` };
     rec = rec ?? (isHermes(q) ? this.hermesRec(q) : null);
-    if (!rec) return {};
+    // 记录里只有状态、没有 token 数(该会话还没报过 pre_api_request):不画进度条。
+    if (!rec || typeof rec.context_tokens !== "number") return {};
     const window = this.windows?.[rec.model ?? ""] ?? 1000000;
     pct = Math.min(100, Math.round((rec.context_tokens / window) * 1000) / 10);
     return { pct, detail: `上下文 ${rec.context_tokens}/${window} tok(${pct}%)`, tokens: `${k(rec.context_tokens)}/${k(window)}` };

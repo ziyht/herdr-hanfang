@@ -17,12 +17,12 @@ import {
   setAgentOrder,
   window,
   layout,
-  readTextFile,
-  home,
 } from "herdr";
 
-// ── Hermes 会话桥(与 spaces-rail-zh 同源:~/.hermes/herdr-status/_latest.json)──
-// 窗口不再写死:hanfang-spaces 每 5 秒从 Hermes 页脚学到"模型 → 窗口"写进
+// ── Hermes 会话桥(与轨道同源:~/.hermes/herdr-status/term/<terminal>.json)──
+// 落盘文件由轨道(views/rail.js)每 1s 按终端名读好,发布在 shared("hanfang.term");
+// 这里按 agent 所在窗格的终端查同一份,不再自己扫表、不再按 cwd 匹配。
+// 窗口不再写死:轨道每 5 秒从 Hermes 页脚学到"模型 → 窗口"写进
 // localStorage("rail.context.windows"),这里与它共用。
 
 function isHermesAgent(a) {
@@ -164,10 +164,6 @@ export class Agents {
     this.changed = JSON.parse(localStorage.getItem("changed") ?? "{}");
     this.pins = JSON.parse(localStorage.getItem("pins") ?? "[]");
     cx.timer.every(30000, (cx) => cx.notify());
-    // hermes 会话状态/用量(每 3s 读一次落盘汇总;含本表全部判定)
-    this.hermesRecs = [];
-    this.pollHermes(cx);
-    cx.timer.every(3000, (cx) => this.pollHermes(cx));
   }
 
   // Stamps agents whose state changed. Done and idle count as one: looking at a
@@ -406,47 +402,16 @@ export class Agents {
 
   // ── What to show ──────────────────────────────────────────────────────────
 
-  pollHermes(cx) {
-    cx.spawn(async (cx) => {
-      let next = [];
-      try {
-        const raw = await readTextFile(`${home()}/.hermes/herdr-status/_latest.json`);
-        for (const r of JSON.parse(raw ?? "[]")) {
-          if (typeof r?.context_tokens !== "number") continue;
-          next.push({
-            session_cwd: r.session_cwd ?? null,
-            state: r.state ?? null,
-            context_tokens: r.context_tokens,
-            model: r.model ?? null,
-            ts: r.ts ?? 0,
-          });
-        }
-      } catch {
-        /* 文件未生成:保持上次 */
-      }
-      if (JSON.stringify(next) !== JSON.stringify(this.hermesRecs)) {
-        this.hermesRecs = next;
-        cx.notify();
-      }
-      // 轨道侧的页脚数据一变就重绘(百分比来自那边)
-      const sig = JSON.stringify(shared("hanfang.context") ?? {});
-      if (sig !== this.ctxSig) {
-        this.ctxSig = sig;
-        cx.notify();
-      }
-    });
+  // 轨道轮询落盘后发布的那份按终端索引的记录(terminal -> {state, context_tokens, …})。
+  termRecs() {
+    return shared("hanfang.term") ?? {};
   }
 
-  // 该 agent 对应的 hermes 会话记录:按其窗格 cwd 与会话真实 cwd 匹配。
+  // 该 agent 对应的 hermes 记录:按它所在窗格的终端名在同一份 map 里直查。
   hermesRecOf(a) {
     const pane = panes().find((p) => p.pane === a.pane);
-    if (!pane?.cwd) return null;
-    const now = Math.floor(Date.now() / 1000);
-    return (
-      this.hermesRecs
-        .filter((r) => r.session_cwd && r.session_cwd === pane.cwd && now - r.ts < 900)
-        .sort((x, y) => y.ts - x.ts)[0] ?? null
-    );
+    if (!pane?.terminal) return null;
+    return this.termRecs()[pane.terminal] ?? null;
   }
 
   hermesStatusOf(a) {
@@ -454,13 +419,13 @@ export class Agents {
   }
 
   // hermes 的 token 占比:优先用空间轨道从 Hermes 页脚读到的数(和终端里显示的一致),
-  // 没有则退回 JSON 的 context_tokens,窗口用页脚学到的值(localStorage 共用),否则 1M。
+  // 没有则用 term 记录里的 context_tokens ÷ 页脚学到的窗口(没有 1M)。
   hermesPctOf(a) {
     const ctx = shared("hanfang.context") ?? {};
     const there = ctx[a.address];
     if (there && typeof there.pct === "number") return there.pct;
     const rec = this.hermesRecOf(a);
-    if (!rec) return undefined;
+    if (!rec || typeof rec.context_tokens !== "number") return undefined;
     let windows = {};
     try { windows = JSON.parse(localStorage.getItem("rail.context.windows") ?? "{}"); } catch { /* 忽略坏值 */ }
     const limit = windows[rec.model ?? ""] ?? 1000000;

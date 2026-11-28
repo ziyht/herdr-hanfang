@@ -46,9 +46,17 @@ zh-patch/zh-mods-patch 工具目录、keys.json、hermes-bridge)仍为拷贝/合
   - 等人 = `on_human_input_request`(审批/sudo/clarify 统一),**不要**用
     pre_tool_call 特判(会漏审批)
   - 被"总是允许"自动放行的命令不阻塞,状态保持 working 是对的
-- 共享 gateway 架构:CLI 只是面板前端,会话与 hooks 跑在 gateway(无 tty、
-  无 HC_TERMINAL_ID)——所以状态走落盘文件(`~/.hermes/herdr-status/`),
-  mod 按 `pane.cwd === session_cwd` 匹配(会话真实 cwd 查 state.db)
+- 共享 gateway 架构:CLI 只是面板前端,会话与 hooks 跑在 gateway(无 tty、无
+  HC_TERMINAL_ID)——无终端会话**不落盘**(物理隔离,不再参与窗格匹配)
+- 状态落盘(2026-11-28 v2):hook 按 `HC_TERMINAL_ID` 写
+  `~/.hermes/herdr-status/term/<终端 id>.json`({state, session_id, ts,
+  context_tokens?, model?});mod 按 `pane.terminal` **直接查文件**,不猜 cwd、
+  不做时效、不扫汇总表。on_session_end 删文件,7 天 mtime 兜底清扫。
+  旧的根目录会话 json / `_latest.json` 已废弃(运行时自动清理)
+- 上下文占比:优先读终端里 Hermes 自己渲染的页脚(`hc read --lines 12`),
+  与终端显示的数字一致;JSON 的 context_tokens 只是兜底
+- hook 脚本改动后必须 `hermes hooks revoke <cmd>` + 重新授权
+  (`HERMES_ACCEPT_HOOKS=1 hermes -z ...` 跑一次),否则 doctor 报未授权
 - GLM-5.3 窗口 1M(查 `~/.hermes/models_dev_cache.json`,勿猜)
 
 ## 验收清单(动过东西后)
